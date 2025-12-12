@@ -7,7 +7,7 @@ setup(
     install_requires=[
         # 'tensorflow-gpu==2.7.0',
         # 'tensorflow-gpu==2.12.0',
-        'tensorflow-macos>=2.9.0',
+        # 'tensorflow-macos>=2.9.0',
         'hydra-core==1.3.2',
         'hydra-submitit-launcher==1.1.5',
         'hydra-optuna-sweeper==1.2.0',
