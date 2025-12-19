@@ -13,11 +13,14 @@ import nltk
 from datasets import load_dataset
 from tqdm import tqdm
 
+from preprocess_brain import ensure_nltk_data
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
     load_dotenv()
+    ensure_nltk_data()
 
     data_dir = os.getenv("GENERAL_PHONEMES_DATA_DIR", "../../../libriSpeechASR")
     output_dir = os.getenv("PREPROCESSED_DATA_DIR", "../../../preprocessed_data")
@@ -30,11 +33,14 @@ if __name__ == "__main__":
         lines = f.readlines()
 
     #initialize the G2p converter
+    logger.info(f"initializing the G2p converter")
     g2p = G2p()
     phoneme_data = []
     phoneme_mask_data = []
 
-    for line in tqdm(lines):
+    for i, line in tqdm(enumerate(lines)):
+        if i % 1000 == 0:
+            logger.info(f"Processing line: {i}")
         phoneme_sequence = g2p(line)
         # Convert phonemes to IDs, using <pad> for unknown phonemes
         phoneme_ids = np.array([PHONE_TO_ID.get(p, PHONE_TO_ID['<pad>']) for p in phoneme_sequence])
