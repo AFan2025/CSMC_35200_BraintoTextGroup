@@ -22,8 +22,10 @@ if __name__ == "__main__":
     load_dotenv()
     ensure_nltk_data()
 
-    data_dir = os.getenv("GENERAL_PHONEMES_DATA_DIR", "../../../libriSpeechASR")
-    output_dir = os.getenv("PREPROCESSED_DATA_DIR", "../../../preprocessed_data")
+    data_dir = os.getenv("GENERAL_PHONEMES_DATA_DIR", None)
+    output_dir = os.getenv("PREPROCESSED_DATA_DIR", None)
+    if data_dir is None or output_dir is None:
+        raise ValueError("Please set the GENERAL_PHONEMES_DATA_DIR and PREPROCESSED_DATA_DIR environment variables.")
     max_phoneme_len = int(os.getenv("MAX_PHONEME_LEN", 128))
     os.makedirs(output_dir, exist_ok=True)
     
