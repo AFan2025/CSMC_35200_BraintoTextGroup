@@ -28,10 +28,8 @@ The LibriSpeech ASR dataset was chosen as it was semantically similar to the BCI
 
 We are using the train.clean.360 split from the LibriSpeech set which is 104k rows long.
 #### LibriSpeech ASR Character length
-- 34.5% 5-63
-- 32.4% 63-121
-- 17.0% 121-179
+Median is between 180 to 219 words
 
-Good Range + greater by a large margin of the character lengths. Will likely use max 179 character lenght from this dataset. If training too long, could consider using up to 121 characters. Limiting to below 179 achieves ~84k rows which is 8x our finetuning BCI set. limiting to 121 rows achieves around ~65k which is 6x our finetuning BCI set. 121 is also around 4x our mean character length in the BCI dataset, which is close to ideal due to allowing the model to see a wealth of phoneme lengths without being too long.
+Good Range + greater by a large margin of the character lengths. Will likely use max 200 character length from this dataset. This isn't the most well specified as there aren't as many sentences in the same length/domain as the BCI dataset, but we will have to make due
 
-For the limits of this project, 121 characters was chosen for compute time using around 65k rows, however, later tests can be made using higher numbers. 
+For the limits of this project, 200 characters was chosen for compute time using around 65k rows, however, later tests can be made using larger datasets numbers. 
