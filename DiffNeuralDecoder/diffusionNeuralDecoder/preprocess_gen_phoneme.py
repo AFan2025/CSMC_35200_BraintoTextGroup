@@ -22,11 +22,12 @@ if __name__ == "__main__":
     load_dotenv()
     ensure_nltk_data()
 
-    data_dir = os.getenv("GENERAL_PHONEMES_DATA_DIR", None)
+    data_dir = os.getenv("GENERAL_PHONEME_CORPUS_DIR", None)
     output_dir = os.getenv("PREPROCESSED_DATA_DIR", None)
     if data_dir is None or output_dir is None:
-        raise ValueError("Please set the GENERAL_PHONEMES_DATA_DIR and PREPROCESSED_DATA_DIR environment variables.")
+        raise ValueError("Please set the GENERAL_PHONEME_CORPUS_DIR and PREPROCESSED_DATA_DIR environment variables.")
     max_phoneme_len = int(os.getenv("MAX_PHONEME_LEN", 128))
+    logger.info(f"Max phoneme length set to {max_phoneme_len}")
     os.makedirs(output_dir, exist_ok=True)
     
     #loading data from data dir
@@ -69,8 +70,8 @@ if __name__ == "__main__":
     output_dir_path = os.path.join(output_dir, "phoneme_data.npz")
     np.savez_compressed(
         output_dir_path,
-        phoneme_data=phoneme_data,        # (N, 128) int16
-        phoneme_mask=phoneme_mask_data,   # (N, 128) bool
+        phoneme_data=phoneme_data,        # (N, max_phoneme_len) int16
+        phoneme_mask=phoneme_mask_data,   # (N, max_phoneme_len) bool
         phoneme_to_id=PHONE_TO_ID,        # Save vocabulary for reference
         max_phoneme_len=max_phoneme_len   # Save config
     )
