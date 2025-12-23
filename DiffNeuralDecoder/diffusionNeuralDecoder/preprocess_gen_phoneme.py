@@ -13,7 +13,7 @@ import nltk
 from datasets import load_dataset
 from tqdm import tqdm
 
-from preprocess_brain import ensure_nltk_data
+from diffusionNeuralDecoder.preprocess_brain import ensure_nltk_data
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
