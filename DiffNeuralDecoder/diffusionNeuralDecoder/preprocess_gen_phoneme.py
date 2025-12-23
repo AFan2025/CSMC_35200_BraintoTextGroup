@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
         #making sure nothings is too long
         if len(phoneme_sequence) > max_phoneme_len:
-            raise ValueError(f"Phoneme sequence length {len(phoneme_sequence)} exceeds max length {max_phoneme_len}")
+            continue
         
         #pad and mask phonemes
         phoneme_mask = np.zeros(max_phoneme_len, dtype=np.bool_)
