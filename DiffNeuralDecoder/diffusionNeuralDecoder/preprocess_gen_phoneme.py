@@ -45,18 +45,19 @@ if __name__ == "__main__":
         if i % 1000 == 0:
             logger.info(f"Processing line: {i}")
         phoneme_sequence = g2p(line)
-        # Convert phonemes to IDs, using <pad> for unknown phonemes
-        phoneme_ids = np.array([PHONE_TO_ID.get(p, PHONE_TO_ID['<pad>']) for p in phoneme_sequence])
+
+        #making sure nothings is too long
+        if len(phoneme_sequence) > max_phoneme_len:
+            raise ValueError(f"Phoneme sequence length {len(phoneme_sequence)} exceeds max length {max_phoneme_len}")
         
         #pad and mask phonemes
         phoneme_mask = np.zeros(max_phoneme_len, dtype=np.bool_)
+        phoneme_mask[:len(phoneme_sequence)] = True
+
         if len(phoneme_sequence) < max_phoneme_len:
-            phoneme_mask[:len(phoneme_sequence)] = True
-            
-            #pad phoneme sequence
-            phoneme_sequence = phoneme_sequence + [PHONE_TO_ID['<pad>']] * (max_phoneme_len - len(phoneme_sequence))
-            padder = np.zeros((max_phoneme_len - len(phoneme_sequence),), dtype=np.int32)* PHONE_TO_ID['<pad>']
-            phoneme_sequence = np.concatenate([phoneme_sequence, padder], axis=0)
+            phoneme_sequence = phoneme_sequence + ['<pad>'] * (max_phoneme_len - len(phoneme_sequence))
+        
+        phoneme_ids = np.array([PHONE_TO_ID.get(p, PHONE_TO_ID['<pad>']) for p in phoneme_sequence])
 
         phoneme_data.append(phoneme_ids)
         phoneme_mask_data.append(phoneme_mask)
