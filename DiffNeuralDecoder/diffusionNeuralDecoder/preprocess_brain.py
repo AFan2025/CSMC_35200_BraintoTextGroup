@@ -239,7 +239,7 @@ def preprocess_2D(sessionName, dataPath, outputFolder, max_seq_len = 512, max_ph
                 mask[:seq_len] = True
                 inputMasks.append(mask)
 
-        #convert to tfRecord file
+        # Convert to dict of data
         session_data = {
             'inputFeatures': input_features,
             'brainfeatureMasks': inputMasks,
