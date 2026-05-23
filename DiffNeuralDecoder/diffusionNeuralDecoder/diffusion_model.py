@@ -282,6 +282,7 @@ class PhonemeDiT(nn.Module):
                 brain_enc_use_layer_norm = True, #whether the brain encoder uses layer norm
                 brain_enc_mlp_num_hidden_layers = 2, #whether the brain uses MLP (only accepts 1 or 2, will fix later TODO)
                 use_final_layer = False, # whether or not to use the specialized final layer
+                decoder_approach = "nn"
                 ):
         super().__init__()
         # Param Inits
@@ -291,13 +292,14 @@ class PhonemeDiT(nn.Module):
 
         # Embedding Layer
         self.x_embedder = nn.Embedding(vocab_size,d_model)
-        
+
         # Layer inits
-        self.brain_encoder = BrainConvolutionalEncoder(brain_enc_input_channels,
-                                                    sequence_encoded_dim,
-                                                    z_brain_dim,
-                                                    brain_enc_use_layer_norm,
-                                                    brain_enc_mlp_num_hidden_layers)
+        if self.use_cross_attention:
+            self.brain_encoder = BrainConvolutionalEncoder(brain_enc_input_channels,
+                                                        sequence_encoded_dim,
+                                                        z_brain_dim,
+                                                        brain_enc_use_layer_norm,
+                                                        brain_enc_mlp_num_hidden_layers)
         self.t_embedder = TimestepEmbedder(d_model, frequency_embedding_size)
         self.pos_embedder = SinPosEmbedding(max_len=max_len, d_model=d_model)
         if self.use_final_layer:
@@ -310,6 +312,8 @@ class PhonemeDiT(nn.Module):
                             use_cross_attention = use_cross_attention, 
                             cond_dim = z_brain_dim) for _ in range(depth)
         ])
+
+        self.decoder = DecoderLayer(self.x_embedder, decoder_approach)
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -377,19 +381,23 @@ class PhonemeDiT(nn.Module):
             if self.final_layer.linear.bias is not None:
                 nn.init.zeros_(self.final_layer.linear.bias)
 
+    def embed_tok(self, x):
+        return self.x_embedder(x)
+    
+    @torch.no_grad()
+    def decode_tok(self, x):
+        return self.decoder(x)
+    
     def forward(self, x, x_mask, t, brain_data, brain_mask): #TODO finish the forward pass
         """
-        Forward pass of DiT.
-        x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
-        t: (N,) tensor of diffusion timesteps
-        y: (N,) tensor of class labels
+        Forward pass of full architecture PhonemeDiT
         """
 
         if self.use_cross_attention:
             brain_enc = self.brain_encoder(brain_data)
             brain_global = brain_enc.mean(dim=1)
         
-        x = self.x_embedder(x) + self.pos_embedder(x)  
+        x = x + self.pos_embedder(x)  
         t = self.t_embedder(t)                   
         c = t
         if self.use_cross_attention:
@@ -400,18 +408,31 @@ class PhonemeDiT(nn.Module):
             else:
                 x = block(x, c, x_mask)
         if self.use_final_layer:
-            x = self.final_layer(x, c)                # (N, T, patch_size ** 2 * out_channels)
+            x = self.final_layer(x, c)
         return x
 
 class DecoderLayer(nn.Module):
     """
     Decodes representations back into phonemes, can use either learned or nearest neighbor decoding, dependent on amount of time to train. 
     """
-    def __init__(self, approach = "nn"):
+    def __init__(self, embedding_layer, approach="nn"):
+        super().__init__()  # also missing this
         self.approach = approach
+        self.embedding_layer = embedding_layer
 
-    def nearest_neighor_decoding():
+    def nn_decoding(self, x_clean):
+        # Nearest-neighbor in embedding table
+        distances = torch.cdist(x_clean, self.x_embedder.weight)
+        return distances.argmin(dim=-1)
+
+    def learned_decoding(self, x):
+        #TODO
         pass
 
-    def learned_decoding():
-        pass
+    def forward(self, x):
+        if self.approach == "nn":
+            return self.nn_decoding(x)
+        elif self.approach == "learned":
+            return self.learned_decoding(x)
+        else:
+            raise ValueError("Please choose decoding approach between learned or nearest neighbor(nn)")
