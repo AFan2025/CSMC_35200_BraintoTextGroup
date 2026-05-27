@@ -415,10 +415,12 @@ class DecoderLayer(nn.Module):
     """
     Decodes representations back into phonemes, can use either learned or nearest neighbor decoding, dependent on amount of time to train. 
     """
-    def __init__(self, embedding_layer, approach="nn"):
+    def __init__(self, d_model, vocab_size, embedding_layer, approach="nn"):
         super().__init__()  # also missing this
         self.approach = approach
         self.embedding_layer = embedding_layer
+        self.unembedding_layer = nn.Embedding(d_model, vocab_size)
+        self.softmax_layer = nn.SoftMax(dim = 1)
 
     def nn_decoding(self, x_clean):
         # Nearest-neighbor in embedding table
@@ -426,8 +428,8 @@ class DecoderLayer(nn.Module):
         return distances.argmin(dim=-1)
 
     def learned_decoding(self, x):
-        #TODO
-        pass
+        logits = self.unembedding_layer(x)
+        return self.softmax_layer(logits)
 
     def forward(self, x):
         if self.approach == "nn":
