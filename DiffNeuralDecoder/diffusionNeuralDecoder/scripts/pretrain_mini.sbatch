@@ -15,7 +15,7 @@ mkdir -p logs
 
 cd /home/afan2025/Masters/Deep_Learning_Systems/CSMC_35200_BraintoTextGroup/DiffNeuralDecoder/diffusionNeuralDecoder
 
-python scripts/pretrain.py \
+CUDA_LAUNCH_BLOCKING=1 python scripts/pretrain.py \
     --epochs 4 \
     --batch-size 4 \
     --ckpt-every 1 \

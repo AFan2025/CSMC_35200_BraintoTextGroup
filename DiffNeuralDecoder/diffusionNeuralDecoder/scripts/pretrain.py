@@ -224,7 +224,6 @@ def main(args):
             x = x.to(device)
             mask = mask.to(device)
             logging.info(f"x min: {x.min()}, x max: {x.max()}, vocab_size: {model.x_embedder.num_embeddings}")
-
             x = model.embed_tok(x)
 
             t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
