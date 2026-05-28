@@ -10,7 +10,7 @@ from collections import OrderedDict
 from dotenv import load_dotenv
 from copy import deepcopy
 from tqdm import tqdm
-import time
+from time import time
 from torch.utils.data import DataLoader, random_split
 load_dotenv()
 
@@ -128,6 +128,7 @@ def main(args):
     log_steps = 0
     running_loss = 0
     start_time = time()
+    best_val_loss = np.inf
 
     logging.info(f"Training for {args.epochs} epochs")
     for epoch in tqdm(range(args.epochs)):
@@ -147,7 +148,7 @@ def main(args):
             opt.zero_grad()
             loss.backward()
             opt.step()
-            update_ema(ema, model)
+            update_ema(ema, model, decay = 0)
 
             # Logging loss values
             running_loss += loss.item()
@@ -160,27 +161,33 @@ def main(args):
                 avg_loss = torch.tensor(running_loss / log_steps, device=device)
                 avg_loss = avg_loss.item()
                 logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.4f}, Train Steps/Sec: {steps_per_sec:.2f}")
-                # Reset monitoring variables:
+                # Reset monitoring variables: 
                 running_loss = 0
                 log_steps = 0
                 start_time = time()
 
         # validation
-        model.eval()
-        with torch.no_grad():
-            val_loss_total = 0.0
-            val_steps = 0
-            for batch in val_loader:
-                x = batch["input_ids"].to(device)
-                mask = batch["attention_mask"].to(device)
-                x = model.embed_tok(x)
-                t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
-                val_loss = training_step(model, x, mask, t, diffusion_scheduler)
-                val_loss_total += val_loss.item()
-                val_steps += 1
+        if epoch % args.ckpt_every == 0:
+            val_losses = []
+            model.eval()
+            with torch.no_grad():
+                for batch in val_loader:
+                    x = batch["input_ids"].to(device)
+                    mask = batch["attention_mask"].to(device)
+                    x = model.embed_tok(x)
+                    t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
+                    val_loss = training_step(model, x, mask, t, diffusion_scheduler)
+                    val_losses.append(val_loss)
+                    val_steps += 1
 
-            if val_steps > 0:
-                logging.info(f"(epoch={epoch:04d}) Val Loss: {val_loss_total / val_steps:.4f}")
+                avg_val_loss = np.mean(val_losses)
+                logging.info(f"(epoch={epoch:04d}) Val Loss: {val_losses / val_steps:.4f}")
+                if avg_val_loss < best_val_loss:
+                    best_val_loss = avg_val_loss
+                    save_checkpoint(model, ema, opt, epoch, val_losses, os.path.join(CHECKPOINT_DIR, "best.pt"))
+                
+                save_checkpoint(model, ema, opt, epoch, train_steps, best_val_loss,
+                        os.path.join(CHECKPOINT_DIR, "latest.pt"))
 
         model.train()
 
@@ -196,13 +203,13 @@ if __name__ == "__main__":
     # parser.add_argument("--image-size", type=int, choices=[256, 512], default=256)
     # parser.add_argument("--num-classes", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=1400)
-    parser.add_argument("--train_split", type=float, default=0.9)
-    parser.add_argument("--batch-size", type=int, default=256)
+    parser.add_argument("--train-split", type=float, default=0.9)
+    parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--global-seed", type=int, default=0)
     parser.add_argument("--vae", type=str, choices=["ema", "mse"], default="ema")  # Choice doesn't affect training
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--log-every", type=int, default=100)
-    parser.add_argument("--ckpt-every", type=int, default=50_000)
+    parser.add_argument("--ckpt-every", type=int, default=5)
     args = parser.parse_args()
     main(args)
 
@@ -229,13 +236,12 @@ def requires_grad(model, flag=True):
     for p in model.parameters():
         p.requires_grad = flag
 
-def save_checkpoint(model, ema, optimizer, epoch, step, val_loss, path):
+def save_checkpoint(model, ema, optimizer, epoch, val_loss, path):
     torch.save({
         'model': model.state_dict(),
         'ema': ema.state_dict(),
         'optimizer': optimizer.state_dict(),
         'epoch': epoch,
-        'step': step,
         'val_loss': val_loss,
     }, path)
 
@@ -244,4 +250,4 @@ def load_checkpoint(path, model, ema, optimizer):
     model.load_state_dict(ckpt['model'])
     ema.load_state_dict(ckpt['ema'])
     optimizer.load_state_dict(ckpt['optimizer'])
-    return ckpt['epoch'], ckpt['step'], ckpt['val_loss']
+    return ckpt['epoch'], ckpt['val_loss']
