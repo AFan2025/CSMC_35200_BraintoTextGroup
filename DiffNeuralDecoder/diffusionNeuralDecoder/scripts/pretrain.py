@@ -24,6 +24,8 @@ BASE_DIR = os.getenv('BASE_DIR')
 GEN_PHONEME_DIR = os.getenv('GEN_PHONEME_DIR')
 COMPETITION_DATA_DIR = os.path.join(BASE_DIR, os.getenv('COMPETITION_DATA_DIR'))
 CHECKPOINT_DIR = os.path.join(BASE_DIR, os.getenv('CHECKPOINT_DIR'))
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
 Z_BRAIN_DIM = int(os.getenv('Z_BRAIN_DIM'))
 D_MODEL = int(os.getenv('D_MODEL'))
 MAX_TEXT_LEN = int(os.getenv('MAX_TEXT_LEN'))
@@ -111,6 +113,7 @@ def main(args):
     logging.info(f"creating EMA")
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
     requires_grad(ema, False)
+    update_ema(ema, model, decay=0)
 
     # Creating diffusion scheduler
     diffusion_scheduler = create_diffusion(timestep_respacing="",
@@ -130,6 +133,14 @@ def main(args):
     start_time = time()
     best_val_loss = np.inf
 
+    latest_path = os.path.join(CHECKPOINT_DIR, "latest.pt")
+    if os.path.exists(latest_path):
+        start_epoch, best_val_loss = load_checkpoint(latest_path, model, ema, opt)
+        start_epoch += 1  # resume from next epoch
+        logging.info(f"Resumed from epoch {start_epoch}")
+    else:
+        start_epoch = 0
+
     logging.info(f"Training for {args.epochs} epochs")
     for epoch in tqdm(range(args.epochs)):
         logging.info(f"Beginning epoch {epoch}")
@@ -147,8 +158,11 @@ def main(args):
             loss = training_step(model, x, mask, t, diffusion_scheduler)
             opt.zero_grad()
             loss.backward()
+
+            # gradient clipping  
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             opt.step()
-            update_ema(ema, model, decay = 0)
+            update_ema(ema, model)
 
             # Logging loss values
             running_loss += loss.item()
@@ -181,7 +195,7 @@ def main(args):
                     val_steps += 1
 
                 avg_val_loss = np.mean(val_losses)
-                logging.info(f"(epoch={epoch:04d}) Val Loss: {val_losses / val_steps:.4f}")
+                logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.4f}")
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     save_checkpoint(model, ema, opt, epoch, val_losses, os.path.join(CHECKPOINT_DIR, "best.pt"))
