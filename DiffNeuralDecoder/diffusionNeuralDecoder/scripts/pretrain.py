@@ -301,6 +301,7 @@ def main(args):
 
                 avg_val_loss = np.mean(val_losses)
                 logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.6f}")
+                print(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.6f}")
                 current_lr = scheduler.get_last_lr()[0]
                 append_metric(metrics_path, "val", epoch, train_steps, float(avg_val_loss), "", current_lr)
                 if avg_val_loss < best_val_loss:
