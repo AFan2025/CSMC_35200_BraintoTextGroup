@@ -1,6 +1,7 @@
 
 # Libraries
 import logging
+import csv
 import torch
 import numpy as np
 import argparse
@@ -56,7 +57,9 @@ BASE_DIR = _get_env('BASE_DIR', default=PROJECT_DIR)
 GEN_PHONEME_DIR = _get_env('GEN_PHONEME_DIR')
 COMPETITION_DATA_DIR = _resolve_path(BASE_DIR, _get_env('COMPETITION_DATA_DIR', default='../../../competition_data'))
 CHECKPOINT_DIR = _resolve_path(BASE_DIR, _get_env('CHECKPOINT_DIR', default='./checkpoints'))
+LOG_DIR = os.path.join(PROJECT_DIR, "logs")
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 
 Z_BRAIN_DIM = _get_env('Z_BRAIN_DIM', int)
 D_MODEL = _get_env('D_MODEL', int)
@@ -122,6 +125,21 @@ def load_checkpoint(path, model, ema, optimizer):
     ema.load_state_dict(ckpt['ema'])
     optimizer.load_state_dict(ckpt['optimizer'])
     return ckpt['epoch'], ckpt['val_loss']
+
+
+def init_metrics_file(log_dir):
+    run_id = int(time())
+    metrics_path = os.path.join(log_dir, f"loss_metrics_{run_id}.csv")
+    with open(metrics_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["phase", "epoch", "step", "loss", "steps_per_sec", "lr"])
+    return metrics_path
+
+
+def append_metric(metrics_path, phase, epoch, step, loss, steps_per_sec="", lr=""):
+    with open(metrics_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([phase, epoch, step, loss, steps_per_sec, lr])
 
 def main(args):
     """
@@ -205,6 +223,8 @@ def main(args):
     running_loss = 0
     start_time = time()
     best_val_loss = np.inf
+    metrics_path = init_metrics_file(LOG_DIR)
+    logging.info(f"Streaming train/val metrics to {metrics_path}")
 
     latest_path = os.path.join(CHECKPOINT_DIR, "latest.pt")
     if os.path.exists(latest_path):
@@ -251,7 +271,9 @@ def main(args):
                 steps_per_sec = log_steps / (end_time - start_time)
                 avg_loss = torch.tensor(running_loss / log_steps, device=device)
                 avg_loss = avg_loss.item()
+                current_lr = scheduler.get_last_lr()[0]
                 logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.4f}, Train Steps/Sec: {steps_per_sec:.2f}")
+                append_metric(metrics_path, "train", epoch, train_steps, avg_loss, steps_per_sec, current_lr)
                 # Reset monitoring variables: 
                 running_loss = 0
                 log_steps = 0
@@ -272,6 +294,8 @@ def main(args):
 
                 avg_val_loss = np.mean(val_losses)
                 logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.4f}")
+                current_lr = scheduler.get_last_lr()[0]
+                append_metric(metrics_path, "val", epoch, train_steps, float(avg_val_loss), "", current_lr)
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     save_checkpoint(model, ema, opt, epoch, train_steps, best_val_loss, os.path.join(CHECKPOINT_DIR, "best.pt"))

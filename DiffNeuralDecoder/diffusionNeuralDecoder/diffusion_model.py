@@ -271,7 +271,7 @@ class PhonemeDiT(nn.Module):
                 d_model = 1024, #dimension of the model
                 vocab_size = 24, #vocab size
                 depth = 6, # number of blocks
-                max_len = 96, #maximum number of phonemes per data
+                max_len = 128, #maximum number of phonemes per data
                 num_heads = 8, #number of attention heads per block 
                 mlp_ratio=4.0, #ratio of how large the up proj of the block MLPs compared to d_model
                 use_cross_attention=False, #whether or not the model is conditioned vs unconditional (unconditional pretraining vs brain conditioned fine tuning)
