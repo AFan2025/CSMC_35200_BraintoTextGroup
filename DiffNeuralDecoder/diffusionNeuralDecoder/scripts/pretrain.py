@@ -223,9 +223,13 @@ def main(args):
             mask = batch["attention_mask"]
             x = x.to(device)
             mask = mask.to(device)
+            logging.info(f"x min: {x.min()}, x max: {x.max()}, vocab_size: {model.x_embedder.num_embeddings}")
+
             x = model.embed_tok(x)
 
             t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
+            logging.info(f"t shape: {t.shape}, t min: {t.min()}, t max: {t.max()}, t device: {t.device}")
+            logging.info(f"num_timesteps: {diffusion_scheduler.num_timesteps}")
             # loss_dict = diffusion_scheduler.training_losses(model, x, t) #DiT codebase has "model_kwargs" but idk what that is
             # loss = loss_dict["loss"].mean()
             loss = training_step(model, x, mask, t, diffusion_scheduler)
