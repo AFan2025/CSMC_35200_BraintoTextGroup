@@ -27,7 +27,15 @@ load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 # Modules
 from diffusion_model import PhonemeDiT
 from diffusion import create_diffusion
-from diffusionNeuralDecoder.datasets.speechDataset import PhonemeDataset
+from diffusionNeuralDecoder.datasets.speechDataset import PhonemeDataset\
+
+# claude recced using a warmup run
+from torch.optim.lr_scheduler import LambdaLR
+warmup_steps = 1000
+def warmup_schedule(step):
+    if step < warmup_steps:
+        return step / warmup_steps
+    return 1.0
 
 # load .env variables
 def _get_env(name, cast=None, default=None):
@@ -189,6 +197,8 @@ def main(args):
     # initialize training objects
     opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0)
 
+    # claude suggested warmup scheduler
+    scheduler = LambdaLR(opt, lr_lambda=warmup_schedule)
 
     train_steps = 0
     log_steps = 0
@@ -225,6 +235,7 @@ def main(args):
             # gradient clipping  
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             opt.step()
+            scheduler.step()
             update_ema(ema, model)
 
             # Logging loss values
