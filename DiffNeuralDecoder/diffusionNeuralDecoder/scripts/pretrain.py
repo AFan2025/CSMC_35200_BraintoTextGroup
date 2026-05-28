@@ -82,9 +82,16 @@ def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_m
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
     
     noise_pred = model(x_noisy, x_mask, t, brain_data, brain_mask)
+    print(f"noise stats: mean={noise.mean().item():.4f}, std={noise.std().item():.4f}")
+    print(f"noise_pred stats: mean={noise_pred.mean().item():.4f}, std={noise_pred.std().item():.4f}")
+    print(f"x_clean stats: mean={x_clean.mean().item():.4f}, std={x_clean.std().item():.6f}")
+    print(f"x_noisy stats: mean={x_noisy.mean().item():.4f}, std={x_noisy.std().item():.6f}")
     
     per_pos = ((noise_pred - noise) ** 2).mean(dim=-1)  # (B, S)
+    print(f"per_pos stats: mean={per_pos.mean().item():.6f}, max={per_pos.max().item():.6f}")
+
     loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
+    print(f"final loss: {loss.item():.6f}")
     return loss
 
 # Additional Methods
@@ -243,12 +250,12 @@ def main(args):
             mask = batch["attention_mask"]
             x = x.to(device)
             mask = mask.to(device)
-            logging.info(f"x min: {x.min()}, x max: {x.max()}, vocab_size: {model.x_embedder.num_embeddings}")
+            # logging.info(f"x min: {x.min()}, x max: {x.max()}, vocab_size: {model.x_embedder.num_embeddings}")
             x = model.embed_tok(x)
 
             t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
-            logging.info(f"t shape: {t.shape}, t min: {t.min()}, t max: {t.max()}, t device: {t.device}")
-            logging.info(f"num_timesteps: {diffusion_scheduler.num_timesteps}")
+            # logging.info(f"t shape: {t.shape}, t min: {t.min()}, t max: {t.max()}, t device: {t.device}")
+            # logging.info(f"num_timesteps: {diffusion_scheduler.num_timesteps}")
             # loss_dict = diffusion_scheduler.training_losses(model, x, t) #DiT codebase has "model_kwargs" but idk what that is
             # loss = loss_dict["loss"].mean()
             loss = training_step(model, x, mask, t, diffusion_scheduler)
