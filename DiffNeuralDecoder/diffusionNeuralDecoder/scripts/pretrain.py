@@ -83,7 +83,6 @@ def main(args):
     # Set up the cuda infrastructure (this is where any Slurm thigns are needed)
     assert torch.cuda.is_available(), "Using a GPU"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    torch.cuda.set_device(device)
 
     # Dataaset laoding
     phoneme_data_path = _resolve_path(BASE_DIR, GEN_PHONEME_DIR)
