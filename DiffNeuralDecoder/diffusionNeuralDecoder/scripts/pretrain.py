@@ -4,15 +4,21 @@ import logging
 import torch
 import numpy as np
 import argparse
-import logging
 import os
+import sys
 from collections import OrderedDict
 from dotenv import load_dotenv
 from copy import deepcopy
 from tqdm import tqdm
 from time import time
 from torch.utils.data import DataLoader, random_split
-load_dotenv()
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
+
+load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 
 # Modules
 from diffusion_model import PhonemeDiT
@@ -20,21 +26,34 @@ from diffusion import create_diffusion
 from diffusionNeuralDecoder.datasets import PhonemeDataset
 
 # load .env variables
-BASE_DIR = os.getenv('BASE_DIR')
-GEN_PHONEME_DIR = os.getenv('GEN_PHONEME_DIR')
-COMPETITION_DATA_DIR = os.path.join(BASE_DIR, os.getenv('COMPETITION_DATA_DIR'))
-CHECKPOINT_DIR = os.path.join(BASE_DIR, os.getenv('CHECKPOINT_DIR'))
+def _get_env(name, cast=None, default=None):
+    raw = os.getenv(name)
+    if raw is None:
+        if default is not None:
+            return default
+        raise ValueError(f"Missing required environment variable: {name}")
+    return cast(raw) if cast is not None else raw
+
+
+def _resolve_path(base_dir, path_value):
+    return path_value if os.path.isabs(path_value) else os.path.normpath(os.path.join(base_dir, path_value))
+
+
+BASE_DIR = _get_env('BASE_DIR', default=PROJECT_DIR)
+GEN_PHONEME_DIR = _get_env('GEN_PHONEME_DIR')
+COMPETITION_DATA_DIR = _resolve_path(BASE_DIR, _get_env('COMPETITION_DATA_DIR', default='../../../competition_data'))
+CHECKPOINT_DIR = _resolve_path(BASE_DIR, _get_env('CHECKPOINT_DIR', default='./checkpoints'))
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
-Z_BRAIN_DIM = int(os.getenv('Z_BRAIN_DIM'))
-D_MODEL = int(os.getenv('D_MODEL'))
-MAX_TEXT_LEN = int(os.getenv('MAX_TEXT_LEN'))
-VOCAB_SIZE = int(os.getenv('VOCAB_SIZE'))
-MODEL_DEPTH = int(os.getenv('MODEL_DEPTH'))
-NUM_HEADS = int(os.getenv('NUM_HEADS'))
-MLP_RATIO = float(os.getenv('MLP_RATIO'))
-DECODER_METHOD = os.getenv('DECODER_METHOD')
-DIFFUSION_NOISE_SCHEDULE = os.getenv('DIFFUSION_NOISE_SCHEDULE')
+Z_BRAIN_DIM = _get_env('Z_BRAIN_DIM', int)
+D_MODEL = _get_env('D_MODEL', int)
+MAX_TEXT_LEN = _get_env('MAX_TEXT_LEN', int)
+VOCAB_SIZE = _get_env('VOCAB_SIZE', int)
+MODEL_DEPTH = _get_env('MODEL_DEPTH', int)
+NUM_HEADS = _get_env('NUM_HEADS', int)
+MLP_RATIO = _get_env('MLP_RATIO', float)
+DECODER_METHOD = _get_env('DECODER_METHOD', default='nn')
+DIFFUSION_NOISE_SCHEDULE = _get_env('DIFFUSION_NOISE_SCHEDULE', default='cosine')
 
 logging.basicConfig(
     filename='app.log', 
@@ -63,7 +82,8 @@ def main(args):
     torch.cuda.set_device(device)
 
     # Dataaset laoding
-    dataset = PhonemeDataset(os.path.join(BASE_DIR, GEN_PHONEME_DIR))
+    phoneme_data_path = _resolve_path(BASE_DIR, GEN_PHONEME_DIR)
+    dataset = PhonemeDataset(phoneme_data_path)
     if not 0.0 < args.train_split < 1.0:
         raise ValueError(f"TRAIN_SPLIT must be between 0 and 1, got {args.train_split}")
 
@@ -91,7 +111,7 @@ def main(args):
         persistent_workers=True,
     )
 
-    logging.info(f"Dataset contains {len(dataset):,} samples ({os.path.join(BASE_DIR, GEN_PHONEME_DIR)})")
+    logging.info(f"Dataset contains {len(dataset):,} samples ({phoneme_data_path})")
     logging.info(f"Train split: {len(train_dataset):,}, Val split: {len(val_dataset):,}")
     logging.info(f"Vocab size of dataset is {dataset.vocab_size}, provided vocab size is {VOCAB_SIZE}")
 
@@ -142,7 +162,7 @@ def main(args):
         start_epoch = 0
 
     logging.info(f"Training for {args.epochs} epochs")
-    for epoch in tqdm(range(args.epochs)):
+    for epoch in tqdm(range(start_epoch, args.epochs)):
         logging.info(f"Beginning epoch {epoch}")
         model.train()
         for batch in train_loader:
@@ -191,14 +211,13 @@ def main(args):
                     x = model.embed_tok(x)
                     t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
                     val_loss = training_step(model, x, mask, t, diffusion_scheduler)
-                    val_losses.append(val_loss)
-                    val_steps += 1
+                    val_losses.append(val_loss.item())
 
                 avg_val_loss = np.mean(val_losses)
                 logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.4f}")
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
-                    save_checkpoint(model, ema, opt, epoch, val_losses, os.path.join(CHECKPOINT_DIR, "best.pt"))
+                    save_checkpoint(model, ema, opt, epoch, train_steps, best_val_loss, os.path.join(CHECKPOINT_DIR, "best.pt"))
                 
                 save_checkpoint(model, ema, opt, epoch, train_steps, best_val_loss,
                         os.path.join(CHECKPOINT_DIR, "latest.pt"))
@@ -250,12 +269,13 @@ def requires_grad(model, flag=True):
     for p in model.parameters():
         p.requires_grad = flag
 
-def save_checkpoint(model, ema, optimizer, epoch, val_loss, path):
+def save_checkpoint(model, ema, optimizer, epoch, step, val_loss, path):
     torch.save({
         'model': model.state_dict(),
         'ema': ema.state_dict(),
         'optimizer': optimizer.state_dict(),
         'epoch': epoch,
+        'step': step,
         'val_loss': val_loss,
     }, path)
 

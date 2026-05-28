@@ -18,6 +18,6 @@ cd /home/afan2025/Masters/Deep_Learning_Systems/CSMC_35200_BraintoTextGroup/Diff
 python scripts/pretrain.py \
     --epochs 200 \
     --batch-size 256 \
-    --val-every 5 \
+    --ckpt-every 5 \
     --log-every 100 \
     --global-seed 42
