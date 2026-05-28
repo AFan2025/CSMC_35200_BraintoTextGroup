@@ -1,8 +1,6 @@
-import pathlib
-import random
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import os
 
 PHONE_DEF = [
@@ -70,27 +68,39 @@ class PhonemeDataset(Dataset):
     """Dataset for pre-computed phoneme sequences"""
     
     def __init__(self, data_path):
-        # Load compressed numpy file
-        data = np.load(data_path)
-        
-        self.phoneme_data = data['phoneme_data']    # (N, 128) int16
-        self.phoneme_mask = data['phoneme_mask']    # (N, 128) bool
+        if not os.path.isfile(data_path):
+            raise FileNotFoundError(f"Phoneme dataset not found at {data_path}")
+
+        data = np.load(data_path, allow_pickle=True)
+
+        required_keys = {'phoneme_data', 'phoneme_mask', 'phoneme_to_id', 'max_phoneme_len'}
+        missing_keys = required_keys.difference(data.files)
+        if missing_keys:
+            raise KeyError(f"Missing keys in phoneme dataset: {sorted(missing_keys)}")
+
+        self.data_path = data_path
+        self.phoneme_data = data['phoneme_data']
+        self.phoneme_mask = data['phoneme_mask']
         self.phoneme_to_id = data['phoneme_to_id'].item()
-        self.max_phoneme_len = data['max_phoneme_len'].item()
-        
-        print(f"Loaded {len(self.phoneme_data)} phoneme sequences")
+        self.max_phoneme_len = int(data['max_phoneme_len'].item())
+        self.pad_token_id = self.phoneme_to_id['<pad>']
+        self.vocab_size = len(self.phoneme_to_id)
+
+        if len(self.phoneme_data) != len(self.phoneme_mask):
+            raise ValueError("phoneme_data and phoneme_mask must have the same number of rows")
     
     def __len__(self):
         return len(self.phoneme_data)
     
     def __getitem__(self, idx):
-        # Direct array indexing - very fast!
-        phonemes = torch.from_numpy(self.phoneme_data[idx]).long()  # (128,)
-        mask = torch.from_numpy(self.phoneme_mask[idx])  # (128,)
+        input_ids = torch.from_numpy(self.phoneme_data[idx]).long()
+        attention_mask = torch.from_numpy(self.phoneme_mask[idx]).bool()
         
         return {
-            'phonemes': phonemes,
-            'mask': mask
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            # 'phonemes': input_ids,
+            # 'mask': attention_mask,
         }
 
 # Usage

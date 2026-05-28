@@ -206,10 +206,10 @@ class PhonemeDiTBlock(nn.Module):
 
     def forward(self, x, c, x_mask=None, z_brain=None, cond_mask=None):
         #inverting masks for padding
-        if x_mask is not None:
-            x_mask = ~x_mask
-        if cond_mask is not None:
-            cond_mask = ~cond_mask
+        # if x_mask is not None:
+        #     x_mask = ~x_mask
+        # if cond_mask is not None:
+        #     cond_mask = ~cond_mask
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
 
@@ -270,9 +270,9 @@ class PhonemeDiT(nn.Module):
     def __init__(self, 
                 d_model = 1024, #dimension of the model
                 vocab_size = 24, #vocab size
-                depth = 16, # number of blocks
+                depth = 6, # number of blocks
                 max_len = 96, #maximum number of phonemes per data
-                num_heads = 16, #number of attention heads per block 
+                num_heads = 8, #number of attention heads per block 
                 mlp_ratio=4.0, #ratio of how large the up proj of the block MLPs compared to d_model
                 use_cross_attention=False, #whether or not the model is conditioned vs unconditional (unconditional pretraining vs brain conditioned fine tuning)
                 frequency_embedding_size=256, # frequency embedding size for timestep embedding, idk what it means but taken from original DiT
@@ -313,7 +313,7 @@ class PhonemeDiT(nn.Module):
                             cond_dim = z_brain_dim) for _ in range(depth)
         ])
 
-        self.decoder = DecoderLayer(self.x_embedder, decoder_approach)
+        self.decoder = DecoderLayer(d_model, vocab_size, self.x_embedder, decoder_approach)
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -392,6 +392,11 @@ class PhonemeDiT(nn.Module):
         """
         Forward pass of full architecture PhonemeDiT
         """
+        # Invert masks once for nn.MultiheadAttention convention
+        # Our convention: True = real token, False = pad
+        # MHA convention: True = ignore, False = attend
+        attn_mask = ~x_mask if x_mask is not None else None
+        attn_cond_mask = ~brain_mask if brain_mask is not None else None
 
         if self.use_cross_attention:
             brain_enc = self.brain_encoder(brain_data)
@@ -404,9 +409,9 @@ class PhonemeDiT(nn.Module):
             c += brain_global                          
         for block in self.blocks:
             if self.use_cross_attention:
-                x = block(x, c, x_mask, brain_enc, brain_mask)
+                x = block(x, c, attn_mask, brain_enc, attn_cond_mask)
             else:
-                x = block(x, c, x_mask)
+                x = block(x, c, attn_mask)
         if self.use_final_layer:
             x = self.final_layer(x, c)
         return x
@@ -420,7 +425,7 @@ class DecoderLayer(nn.Module):
         self.approach = approach
         self.embedding_layer = embedding_layer
         self.unembedding_layer = nn.Embedding(d_model, vocab_size)
-        self.softmax_layer = nn.SoftMax(dim = 1)
+        self.softmax_layer = nn.Softmax(dim = 1)
 
     def nn_decoding(self, x_clean):
         # Nearest-neighbor in embedding table

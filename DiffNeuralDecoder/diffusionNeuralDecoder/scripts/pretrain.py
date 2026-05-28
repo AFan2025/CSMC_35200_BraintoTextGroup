@@ -1,1 +1,247 @@
+
+# Libraries
+import logging
+import torch
+import numpy as np
+import argparse
+import logging
+import os
+from collections import OrderedDict
+from dotenv import load_dotenv
+from copy import deepcopy
+from tqdm import tqdm
+import time
+from torch.utils.data import DataLoader, random_split
+load_dotenv()
+
+# Modules
 from diffusion_model import PhonemeDiT
+from diffusion import create_diffusion
+from diffusionNeuralDecoder.datasets import PhonemeDataset
+
+# load .env variables
+BASE_DIR = os.getenv('BASE_DIR')
+GEN_PHONEME_DIR = os.getenv('GEN_PHONEME_DIR')
+COMPETITION_DATA_DIR = os.path.join(BASE_DIR, os.getenv('COMPETITION_DATA_DIR'))
+CHECKPOINT_DIR = os.path.join(BASE_DIR, os.getenv('CHECKPOINT_DIR'))
+Z_BRAIN_DIM = int(os.getenv('Z_BRAIN_DIM'))
+D_MODEL = int(os.getenv('D_MODEL'))
+MAX_TEXT_LEN = int(os.getenv('MAX_TEXT_LEN'))
+VOCAB_SIZE = int(os.getenv('VOCAB_SIZE'))
+MODEL_DEPTH = int(os.getenv('MODEL_DEPTH'))
+NUM_HEADS = int(os.getenv('NUM_HEADS'))
+MLP_RATIO = float(os.getenv('MLP_RATIO'))
+DECODER_METHOD = os.getenv('DECODER_METHOD')
+DIFFUSION_NOISE_SCHEDULE = os.getenv('DIFFUSION_NOISE_SCHEDULE')
+
+logging.basicConfig(
+    filename='app.log', 
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_mask=None):
+    noise = torch.randn_like(x_clean)
+    x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
+    
+    noise_pred = model(x_noisy, x_mask, t, brain_data, brain_mask)
+    
+    per_pos = ((noise_pred - noise) ** 2).mean(dim=-1)  # (B, S)
+    loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
+    return loss
+
+def main(args):
+    """
+    Primary Training Script
+    """
+
+    # Set up the cuda infrastructure (this is where any Slurm thigns are needed)
+    assert torch.cuda.is_available(), "Using a GPU"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.cuda.set_device(device)
+
+    # Dataaset laoding
+    dataset = PhonemeDataset(os.path.join(BASE_DIR, GEN_PHONEME_DIR))
+    if not 0.0 < args.train_split < 1.0:
+        raise ValueError(f"TRAIN_SPLIT must be between 0 and 1, got {args.train_split}")
+
+    train_size = int(len(dataset) * args.train_split)
+    val_size = len(dataset) - train_size
+    generator = torch.Generator().manual_seed(args.global_seed)
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
+
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=args.batch_size,
+        shuffle = True,
+        num_workers = args.num_workers,
+        pin_memory = True,
+        drop_last = True,
+        persistent_workers = True,
+    )
+    val_loader = DataLoader(
+        dataset=val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=True,
+        drop_last=False,
+        persistent_workers=True,
+    )
+
+    logging.info(f"Dataset contains {len(dataset):,} samples ({os.path.join(BASE_DIR, GEN_PHONEME_DIR)})")
+    logging.info(f"Train split: {len(train_dataset):,}, Val split: {len(val_dataset):,}")
+    logging.info(f"Vocab size of dataset is {dataset.vocab_size}, provided vocab size is {VOCAB_SIZE}")
+
+    # initialize model
+    model = PhonemeDiT(
+        d_model= D_MODEL,
+        vocab_size= dataset.vocab_size,
+        depth = MODEL_DEPTH,
+        max_len = MAX_TEXT_LEN,
+        num_heads = NUM_HEADS,
+        mlp_ratio = MLP_RATIO,
+        use_cross_attention = False, #pretraining is unconditional
+        frequency_embedding_size = 256, #can change but honestly don't
+        z_brain_dim = Z_BRAIN_DIM,
+        decoder_approach = DECODER_METHOD).to(device)
+    logging.info(f"Model initiated using device {device}")
+
+    # ema (used in original meta DiT paper)
+    logging.info(f"creating EMA")
+    ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
+    requires_grad(ema, False)
+
+    # Creating diffusion scheduler
+    diffusion_scheduler = create_diffusion(timestep_respacing="",
+                                        noise_schedule = DIFFUSION_NOISE_SCHEDULE,
+                                        learn_sigma = False,
+                                        sigma_small = True,
+                                        predict_xstart = False) #default training steps, not for inference
+    logging.info(f"Diffusion Scheduler created, with {DIFFUSION_NOISE_SCHEDULE} noise schedule")
+
+    # initialize training objects
+    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0)
+
+
+    train_steps = 0
+    log_steps = 0
+    running_loss = 0
+    start_time = time()
+
+    logging.info(f"Training for {args.epochs} epochs")
+    for epoch in tqdm(range(args.epochs)):
+        logging.info(f"Beginning epoch {epoch}")
+        model.train()
+        for batch in train_loader:
+            x = batch["input_ids"]
+            mask = batch["attention_mask"]
+            x = x.to(device)
+            mask = mask.to(device)
+            x = model.embed_tok(x)
+
+            t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
+            # loss_dict = diffusion_scheduler.training_losses(model, x, t) #DiT codebase has "model_kwargs" but idk what that is
+            # loss = loss_dict["loss"].mean()
+            loss = training_step(model, x, mask, t, diffusion_scheduler)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            update_ema(ema, model)
+
+            # Logging loss values
+            running_loss += loss.item()
+            log_steps += 1
+            train_steps += 1
+            if train_steps % args.log_every == 0:
+                torch.cuda.synchronize()
+                end_time = time()
+                steps_per_sec = log_steps / (end_time - start_time)
+                avg_loss = torch.tensor(running_loss / log_steps, device=device)
+                avg_loss = avg_loss.item()
+                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.4f}, Train Steps/Sec: {steps_per_sec:.2f}")
+                # Reset monitoring variables:
+                running_loss = 0
+                log_steps = 0
+                start_time = time()
+
+        # validation
+        model.eval()
+        with torch.no_grad():
+            val_loss_total = 0.0
+            val_steps = 0
+            for batch in val_loader:
+                x = batch["input_ids"].to(device)
+                mask = batch["attention_mask"].to(device)
+                x = model.embed_tok(x)
+                t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
+                val_loss = training_step(model, x, mask, t, diffusion_scheduler)
+                val_loss_total += val_loss.item()
+                val_steps += 1
+
+            if val_steps > 0:
+                logging.info(f"(epoch={epoch:04d}) Val Loss: {val_loss_total / val_steps:.4f}")
+
+        model.train()
+
+
+    logging.info("Done!")
+
+
+if __name__ == "__main__":
+    # Default args here will train DiT-XL/2 with the hyperparameters we used in our paper (except training iters).
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--results-dir", type=str, default="results")
+    # parser.add_argument("--model", type=str, choices=list(DiT_models.keys()), default="DiT-XL/2")
+    # parser.add_argument("--image-size", type=int, choices=[256, 512], default=256)
+    # parser.add_argument("--num-classes", type=int, default=1000)
+    parser.add_argument("--epochs", type=int, default=1400)
+    parser.add_argument("--train_split", type=float, default=0.9)
+    parser.add_argument("--batch-size", type=int, default=256)
+    parser.add_argument("--global-seed", type=int, default=0)
+    parser.add_argument("--vae", type=str, choices=["ema", "mse"], default="ema")  # Choice doesn't affect training
+    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--log-every", type=int, default=100)
+    parser.add_argument("--ckpt-every", type=int, default=50_000)
+    args = parser.parse_args()
+    main(args)
+
+
+# Additional Methods
+
+# used for EMA
+@torch.no_grad()
+def update_ema(ema_model, model, decay=0.9999):
+    """
+    Step the EMA model towards the current model.
+    """
+    ema_params = OrderedDict(ema_model.named_parameters())
+    model_params = OrderedDict(model.named_parameters())
+
+    for name, param in model_params.items():
+        # TODO: Consider applying only to params that require_grad to avoid small numerical changes of pos_embed
+        ema_params[name].mul_(decay).add_(param.data, alpha=1 - decay)
+
+def requires_grad(model, flag=True):
+    """
+    Set requires_grad flag for all parameters in a model.
+    """
+    for p in model.parameters():
+        p.requires_grad = flag
+
+def save_checkpoint(model, ema, optimizer, epoch, step, val_loss, path):
+    torch.save({
+        'model': model.state_dict(),
+        'ema': ema.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch,
+        'step': step,
+        'val_loss': val_loss,
+    }, path)
+
+def load_checkpoint(path, model, ema, optimizer):
+    ckpt = torch.load(path, map_location='cpu')
+    model.load_state_dict(ckpt['model'])
+    ema.load_state_dict(ckpt['ema'])
+    optimizer.load_state_dict(ckpt['optimizer'])
+    return ckpt['epoch'], ckpt['step'], ckpt['val_loss']
