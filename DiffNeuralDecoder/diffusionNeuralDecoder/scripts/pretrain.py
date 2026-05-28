@@ -75,8 +75,6 @@ logging.basicConfig(
 )
 
 def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_mask=None):
-    if t.dtype != torch.long:
-        t = t.long()
     noise = torch.randn_like(x_clean)
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
     
@@ -137,11 +135,6 @@ def main(args):
     # Dataaset laoding
     phoneme_data_path = _resolve_path(BASE_DIR, GEN_PHONEME_DIR)
     dataset = PhonemeDataset(phoneme_data_path)
-    if hasattr(dataset, "max_phoneme_len") and dataset.max_phoneme_len > MAX_TEXT_LEN:
-        raise ValueError(
-            f"Dataset max_phoneme_len ({dataset.max_phoneme_len}) exceeds model MAX_TEXT_LEN ({MAX_TEXT_LEN}). "
-            "Increase MAX_TEXT_LEN or regenerate data with a smaller max length."
-        )
     if not 0.0 < args.train_split < 1.0:
         raise ValueError(f"TRAIN_SPLIT must be between 0 and 1, got {args.train_split}")
 
@@ -228,22 +221,6 @@ def main(args):
         for batch in train_loader:
             x = batch["input_ids"]
             mask = batch["attention_mask"]
-
-            # Catch bad token IDs early; out-of-range IDs trigger opaque CUDA asserts in Embedding.
-            x_min = int(x.min().item())
-            x_max = int(x.max().item())
-            vocab_ceiling = model.x_embedder.num_embeddings - 1
-            if x_min < 0 or x_max > vocab_ceiling:
-                raise ValueError(
-                    f"Token IDs out of range: min={x_min}, max={x_max}, expected [0, {vocab_ceiling}]"
-                )
-
-            if x.shape[1] > model.pos_embedder.pos_embedding.num_embeddings:
-                raise ValueError(
-                    f"Sequence length {x.shape[1]} exceeds positional embedding capacity "
-                    f"{model.pos_embedder.pos_embedding.num_embeddings}"
-                )
-
             x = x.to(device)
             mask = mask.to(device)
             x = model.embed_tok(x)
