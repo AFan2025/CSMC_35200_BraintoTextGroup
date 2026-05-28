@@ -43,6 +43,7 @@ def _resolve_path(base_dir, path_value):
     return path_value if os.path.isabs(path_value) else os.path.normpath(os.path.join(base_dir, path_value))
 
 
+
 BASE_DIR = _get_env('BASE_DIR', default=PROJECT_DIR)
 GEN_PHONEME_DIR = _get_env('GEN_PHONEME_DIR')
 COMPETITION_DATA_DIR = _resolve_path(BASE_DIR, _get_env('COMPETITION_DATA_DIR', default='../../../competition_data'))
@@ -74,6 +75,45 @@ def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_m
     per_pos = ((noise_pred - noise) ** 2).mean(dim=-1)  # (B, S)
     loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
     return loss
+
+# Additional Methods
+
+# used for EMA
+@torch.no_grad()
+def update_ema(ema_model, model, decay=0.9999):
+    """
+    Step the EMA model towards the current model.
+    """
+    ema_params = OrderedDict(ema_model.named_parameters())
+    model_params = OrderedDict(model.named_parameters())
+
+    for name, param in model_params.items():
+        # TODO: Consider applying only to params that require_grad to avoid small numerical changes of pos_embed
+        ema_params[name].mul_(decay).add_(param.data, alpha=1 - decay)
+
+def requires_grad(model, flag=True):
+    """
+    Set requires_grad flag for all parameters in a model.
+    """
+    for p in model.parameters():
+        p.requires_grad = flag
+
+def save_checkpoint(model, ema, optimizer, epoch, step, val_loss, path):
+    torch.save({
+        'model': model.state_dict(),
+        'ema': ema.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch,
+        'step': step,
+        'val_loss': val_loss,
+    }, path)
+
+def load_checkpoint(path, model, ema, optimizer):
+    ckpt = torch.load(path, map_location='cpu')
+    model.load_state_dict(ckpt['model'])
+    ema.load_state_dict(ckpt['ema'])
+    optimizer.load_state_dict(ckpt['optimizer'])
+    return ckpt['epoch'], ckpt['val_loss']
 
 def main(args):
     """
@@ -248,43 +288,3 @@ if __name__ == "__main__":
     parser.add_argument("--ckpt-every", type=int, default=5)
     args = parser.parse_args()
     main(args)
-
-
-# Additional Methods
-
-# used for EMA
-@torch.no_grad()
-def update_ema(ema_model, model, decay=0.9999):
-    """
-    Step the EMA model towards the current model.
-    """
-    ema_params = OrderedDict(ema_model.named_parameters())
-    model_params = OrderedDict(model.named_parameters())
-
-    for name, param in model_params.items():
-        # TODO: Consider applying only to params that require_grad to avoid small numerical changes of pos_embed
-        ema_params[name].mul_(decay).add_(param.data, alpha=1 - decay)
-
-def requires_grad(model, flag=True):
-    """
-    Set requires_grad flag for all parameters in a model.
-    """
-    for p in model.parameters():
-        p.requires_grad = flag
-
-def save_checkpoint(model, ema, optimizer, epoch, step, val_loss, path):
-    torch.save({
-        'model': model.state_dict(),
-        'ema': ema.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'epoch': epoch,
-        'step': step,
-        'val_loss': val_loss,
-    }, path)
-
-def load_checkpoint(path, model, ema, optimizer):
-    ckpt = torch.load(path, map_location='cpu')
-    model.load_state_dict(ckpt['model'])
-    ema.load_state_dict(ckpt['ema'])
-    optimizer.load_state_dict(ckpt['optimizer'])
-    return ckpt['epoch'], ckpt['val_loss']
