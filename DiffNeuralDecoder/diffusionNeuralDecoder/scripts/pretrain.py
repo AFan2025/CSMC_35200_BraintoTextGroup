@@ -82,16 +82,16 @@ def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_m
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
     
     noise_pred = model(x_noisy, x_mask, t, brain_data, brain_mask)
-    print(f"noise stats: mean={noise.mean().item():.4f}, std={noise.std().item():.4f}")
-    print(f"noise_pred stats: mean={noise_pred.mean().item():.4f}, std={noise_pred.std().item():.4f}")
-    print(f"x_clean stats: mean={x_clean.mean().item():.4f}, std={x_clean.std().item():.6f}")
-    print(f"x_noisy stats: mean={x_noisy.mean().item():.4f}, std={x_noisy.std().item():.6f}")
+    # print(f"noise stats: mean={noise.mean().item():.4f}, std={noise.std().item():.4f}")
+    # print(f"noise_pred stats: mean={noise_pred.mean().item():.4f}, std={noise_pred.std().item():.4f}")
+    # print(f"x_clean stats: mean={x_clean.mean().item():.4f}, std={x_clean.std().item():.6f}")
+    # print(f"x_noisy stats: mean={x_noisy.mean().item():.4f}, std={x_noisy.std().item():.6f}")
     
     per_pos = ((noise_pred - noise) ** 2).mean(dim=-1)  # (B, S)
-    print(f"per_pos stats: mean={per_pos.mean().item():.6f}, max={per_pos.max().item():.6f}")
+    # print(f"per_pos stats: mean={per_pos.mean().item():.6f}, max={per_pos.max().item():.6f}")
 
     loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
-    print(f"final loss: {loss.item():.6f}")
+    # print(f"final loss: {loss.item():.6f}")
     return loss
 
 # Additional Methods
@@ -279,7 +279,7 @@ def main(args):
                 avg_loss = torch.tensor(running_loss / log_steps, device=device)
                 avg_loss = avg_loss.item()
                 current_lr = scheduler.get_last_lr()[0]
-                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.4f}, Train Steps/Sec: {steps_per_sec:.2f}")
+                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}")
                 append_metric(metrics_path, "train", epoch, train_steps, avg_loss, steps_per_sec, current_lr)
                 # Reset monitoring variables: 
                 running_loss = 0
@@ -300,7 +300,7 @@ def main(args):
                     val_losses.append(val_loss.item())
 
                 avg_val_loss = np.mean(val_losses)
-                logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.4f}")
+                logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.6f}")
                 current_lr = scheduler.get_last_lr()[0]
                 append_metric(metrics_path, "val", epoch, train_steps, float(avg_val_loss), "", current_lr)
                 if avg_val_loss < best_val_loss:
