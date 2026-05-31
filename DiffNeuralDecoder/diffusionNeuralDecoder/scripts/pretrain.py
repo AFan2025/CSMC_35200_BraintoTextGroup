@@ -71,11 +71,18 @@ MLP_RATIO = _get_env('MLP_RATIO', float)
 DECODER_METHOD = _get_env('DECODER_METHOD', default='nn')
 DIFFUSION_NOISE_SCHEDULE = _get_env('DIFFUSION_NOISE_SCHEDULE', default='cosine')
 
-logging.basicConfig(
-    filename='app.log', 
-    level=logging.INFO, 
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+# File handler
+fh = logging.FileHandler(os.path.join(LOG_DIR, 'pretrain.log'))
+fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+root_logger.addHandler(fh)
+
+# Also keep console output so you can see it live
+sh = logging.StreamHandler()
+sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+root_logger.addHandler(sh)
 
 def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_mask=None):
     noise = torch.randn_like(x_clean)
