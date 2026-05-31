@@ -147,7 +147,7 @@ def preprocess_2D(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128
     This is different from the 1D feature preprocessing where the output is (T, feature_dim)
     """
     
-    partNames = ['train','test','competitionHoldOut']
+    partNames = ['test','competitionHoldOut', 'train']
     
     for partIdx in partNames:
 
@@ -192,11 +192,11 @@ def preprocess_2D(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128
                 sentence = str(np.squeeze(dat['sentenceText'][i])).strip()
                 phoneme_ids = g2p_transcription(sentence)
 
-                phoneme_array = np.full((max_phoneme_len,), PHONE_TO_ID['<pad>'], dtype=np.int32)
+                phoneme_array = np.full((max_phoneme_len,), PHONE_TO_ID['<pad>'], dtype=np.int16)
                 phoneme_mask = np.zeros((max_phoneme_len,), dtype=np.bool_)
                 valid_phoneme_len = min(len(phoneme_ids), max_phoneme_len)
                 if valid_phoneme_len > 0:
-                    phoneme_array[:valid_phoneme_len] = np.asarray(phoneme_ids[:valid_phoneme_len], dtype=np.int32)
+                    phoneme_array[:valid_phoneme_len] = np.asarray(phoneme_ids[:valid_phoneme_len], dtype=np.int16)
                     phoneme_mask[:valid_phoneme_len] = True
 
                 session_records.append({
@@ -235,10 +235,10 @@ def preprocess_2D(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128
             for rec in session_records:
                 tx1_map = rec['tx1'][:, ROWS]
                 spike_map = rec['spikePow'][:, ROWS]
-                feature = np.stack([tx1_map, spike_map], axis=-1).astype(np.float32, copy=False)
+                feature = np.stack([tx1_map, spike_map], axis=-1).astype(np.float16, copy=False)
 
                 seq_len = rec['frame_len']
-                padded_feature = np.zeros((max_seq_len, 16, 8, 2), dtype=np.float32)
+                padded_feature = np.zeros((max_seq_len, 16, 8, 2), dtype=np.float16)
                 padded_feature[:seq_len] = feature
 
                 input_mask = np.zeros((max_seq_len,), dtype=np.bool_)
@@ -261,7 +261,7 @@ def preprocess_2D(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128
             total_transcriptions = np.array(total_transcriptions, dtype=object)
             total_frame_lens = np.asarray(total_frame_lens, dtype=np.int32)
         else:
-            total_input_features = np.zeros((0, max_seq_len, 16, 8, 2), dtype=np.float32)
+            total_input_features = np.zeros((0, max_seq_len, 16, 8, 2), dtype=np.float16)
             total_inputMasks = np.zeros((0, max_seq_len), dtype=np.bool_)
             total_phoneme_tokens = np.zeros((0, max_phoneme_len), dtype=np.int32)
             total_phoneme_masks = np.zeros((0, max_phoneme_len), dtype=np.bool_)
@@ -271,7 +271,7 @@ def preprocess_2D(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128
         logger.info(f"Processed {len(total_input_features)} brain sequences.")
 
         output_path = os.path.join(output_dir, "brain_data.npz")
-        np.savez_compressed(
+        np.savez(
             output_path,
             input_features=total_input_features,
             inputMasks=total_inputMasks,
