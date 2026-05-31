@@ -15,4 +15,4 @@ mkdir -p logs
 
 cd /home/afan2025/Masters/Deep_Learning_Systems/CSMC_35200_BraintoTextGroup/DiffNeuralDecoder/diffusionNeuralDecoder
 
-python preprocess_brain.py
+python -m diffusionNeuralDecoder.preprocess_brain
