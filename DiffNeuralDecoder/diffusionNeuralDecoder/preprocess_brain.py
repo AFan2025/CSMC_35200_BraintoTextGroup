@@ -1,11 +1,8 @@
 import scipy.io
 import numpy as np
-import torch
 from g2p_en import G2p
-from torch.utils.data import Dataset, DataLoader
 import os
-from diffusionNeuralDecoder.datasets.speechDataset import PHONE_DEF_SIL, PHONE_TO_ID
-from torch.utils.data import Dataset, DataLoader
+from diffusionNeuralDecoder.datasets.speechDataset import PHONE_TO_ID
 from dotenv import load_dotenv
 import logging
 import re
@@ -45,6 +42,7 @@ def ensure_nltk_data():
 
 #G2p requires an additional nltk data download
 ensure_nltk_data()
+G2P_ENGINE = G2p()
 
 def find_max_seq_len(competition_data_dir=COMPETITION_DATA_DIR, tolerable_len=None, tolerable_percentile=95):
     """
@@ -64,6 +62,9 @@ def find_max_seq_len(competition_data_dir=COMPETITION_DATA_DIR, tolerable_len=No
     for division in ["train", "test", "competitionHoldOut"]:
         names_list = os.listdir(os.path.join(competition_data_dir, division))
         for name in names_list:
+            if name[-3:] == "txt":
+                logger.info(f"skipping {name}")
+                continue
             data_path = os.path.join(competition_data_dir, division, name)
             dat = scipy.io.loadmat(data_path)
             # features = np.concatenate([dat['tx1'][0,i][:,0:128], dat['spikePow'][0,i][:,0:128]], axis=1)
@@ -134,7 +135,7 @@ def preprocess_1D(sessionName, dataPath, max_seq_len, outputFolder):
             'frameLens': frame_lens
         }
 
-def preprocess_2D(sessionName, dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128):
+def preprocess_2D(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128):
     """
     Preprocess raw .mat data files into .pt files format for Brain-to-Text competition.
     This is the step for the model architecture that uses the convolutional layers to process spatial features
@@ -144,115 +145,139 @@ def preprocess_2D(sessionName, dataPath, outputFolder, max_seq_len = 512, max_ph
     
     partNames = ['train','test','competitionHoldOut']
     
-    for partIdx in range(len(partNames)):
-        sessionPath = dataPath + '/' + partNames[partIdx] + '/' + sessionName + '.mat'
-        if not os.path.isfile(sessionPath):
-            continue
-            
-        dat = scipy.io.loadmat(sessionPath)
+    for partIdx in partNames:
 
-        tx1_features = [] #List of arrays Datapoints x (Seq_len, 128)
-        spikePow_features = [] #List of arrays Datapoints x (Seq_len, 128)
-        transcriptions = [] #List of strings Datapoints x (sentence)
-        frame_lens = [] # List of ints Datapoints x (Seq_len)
-        n_trials = dat['sentenceText'].shape[0]
-        input_features = []
-        phoneme_tokens = []
-        phoneme_masks = []
+        output_dir = os.path.join(outputFolder, partIdx)
+        os.makedirs(output_dir, exist_ok=True)
 
-        #collect area 6v tx1 and spikePow features
-        for i in range(n_trials):    
-            #get time series of TX and spike power for this trial
-            #first 128 columns = area 6v only
-            #tx1: (time, 128), spikePow: (time, 128)
-            tx1 = dat['tx1'][0,i][:,0:128]
-            spikePow = dat['spikePow'][0,i][:,0:128]
+        # Flat lists are much faster to stack than nested session-level object lists.
+        total_input_features = []
+        total_inputMasks = []
+        total_phoneme_tokens = []
+        total_phoneme_masks = []
+        total_transcriptions = []
+        total_frame_lens = []
 
-            assert tx1.shape[0] == spikePow.shape[0]
-            seq_len = tx1.shape[0]
-            sentence = dat['sentenceText'][i].strip()
+        part_dir = os.path.join(dataPath, partIdx)
+        names_list = sorted(os.listdir(part_dir))
+        for sessionName in names_list:
+            if sessionName.endswith(".txt"):
+                logger.info(f"skipping {sessionName}")
+                continue
 
-            #convert to phonemes
-            phoneme_sequence = g2p_transcription(sentence)
-            phoneme_sequence = np.array(phoneme_sequence, dtype=np.int32)
+            sessionPath = os.path.join(part_dir, sessionName)
+            if not os.path.isfile(sessionPath):
+                continue
 
-            #pad and mask phonemes
-            phoneme_mask = np.zeros(max_phoneme_len, dtype=np.bool_)
-            if len(phoneme_sequence) < max_phoneme_len:
-                phoneme_mask[:len(phoneme_sequence)] = True
-                #pad phoneme sequence
-                phoneme_sequence = phoneme_sequence + [PHONE_TO_ID['<pad>']] * (max_phoneme_len - len(phoneme_sequence))
-                padder = np.zeros((max_phoneme_len - len(phoneme_sequence),), dtype=np.int32)* PHONE_TO_ID['<pad>']
-                phoneme_sequence = np.concatenate([phoneme_sequence, padder], axis=0)
+            dat = scipy.io.loadmat(sessionPath)
+            blockNums = np.squeeze(dat['blockIdx']).astype(np.int32)
+            n_trials = dat['sentenceText'].shape[0]
 
-            if seq_len >= max_seq_len:
-                continue #skip this data point if too long because truncating would lose information and mismatch with transcriptions
-            tx1_features.append(tx1)
-            spikePow_features.append(spikePow)
-            transcriptions.append(sentence)
-            phoneme_tokens.append(phoneme_sequence)
-            phoneme_masks.append(phoneme_mask)
-            frame_lens.append(seq_len)
+            session_records = []
 
-        #block-wise feature normalization
-        #this is needed to be done because different blocks have different signal characteristics/conditions
-        #normalize across the entire block x sequence for every feature in the block
-        logger.info(f'Normalizing features block-wise for session {sessionName} in partition {partNames[partIdx]}')
-        blockNums = np.squeeze(dat['blockIdx'])
-        blockList = np.unique(blockNums)
+            # Collect valid trials first so normalization only touches kept examples.
+            for i in range(n_trials):
+                tx1 = dat['tx1'][0, i][:, 0:128]
+                spikePow = dat['spikePow'][0, i][:, 0:128]
 
-        for block_id in blockList:
-            #list of indexes of all trials in a single block
-            block_trials = np.where(blockNums == block_id)[0]
+                assert tx1.shape[0] == spikePow.shape[0]
+                seq_len = tx1.shape[0]
+                if seq_len >= max_seq_len:
+                    continue
 
-            #normalize tx1 first 
-            block_tx_features = np.concatenate([tx1_features[i] for i in block_trials], axis=0)
-            tx_mean = np.mean(block_tx_features, axis=0, keepdims=True)
-            tx_std = np.std(block_tx_features, axis=0, keepdims=True)
+                sentence = str(np.squeeze(dat['sentenceText'][i])).strip()
+                phoneme_ids = g2p_transcription(sentence)
 
-            #normalize spike power next
-            block_spike_features = np.concatenate([spikePow_features[i] for i in block_trials], axis=0)
-            spike_mean = np.mean(block_spike_features, axis=0, keepdims=True)
-            spike_std = np.std(block_spike_features, axis=0, keepdims=True)
-            for i in block_trials:
-                tx1_features[i] = (tx1_features[i] - tx_mean) / (tx_std + 1e-8)
-                spikePow_features[i] = (spikePow_features[i] - spike_mean) / (spike_std + 1e-8)
+                phoneme_array = np.full((max_phoneme_len,), PHONE_TO_ID['<pad>'], dtype=np.int32)
+                phoneme_mask = np.zeros((max_phoneme_len,), dtype=np.bool_)
+                valid_phoneme_len = min(len(phoneme_ids), max_phoneme_len)
+                if valid_phoneme_len > 0:
+                    phoneme_array[:valid_phoneme_len] = np.asarray(phoneme_ids[:valid_phoneme_len], dtype=np.int32)
+                    phoneme_mask[:valid_phoneme_len] = True
 
-        #reshape features into H x W spatial maps
-        ## THIS MIGHT NOT BE CORRECT - NEED TO DOUBLE CHECK THE INDEXING, if something looks off later come back here
-        logger.info(f'Reshaping features into spatial maps for session {sessionName} in partition {partNames[partIdx]}')
-        for i in range(len(tx1_features)):
-            tx1_features[i] = tx1_features[i][:,ROWS]
-            spikePow_features[i] = spikePow_features[i][:,ROWS]
-            input_features.append(np.stack([tx1_features[i], spikePow_features[i]], axis=-1) ) #shape (T, 16, 8, 2)
+                session_records.append({
+                    'tx1': tx1,
+                    'spikePow': spikePow,
+                    'sentence': sentence,
+                    'phoneme_tokens': phoneme_array,
+                    'phoneme_mask': phoneme_mask,
+                    'frame_len': seq_len,
+                    'block': int(blockNums[i]),
+                })
 
-        #pad until max_seq_len
-        logger.info(f'Padding sequences to max sequence length: {max_seq_len}')
-        inputMasks = []
-        for i in range(len(input_features)):
-            seq_len = input_features[i].shape[0]
-            if seq_len < max_sequence_len:
-                pad_width = ((0, max_sequence_len - seq_len), (0, 0), (0, 0), (0, 0))
-                input_features[i] = np.pad(input_features[i], pad_width, mode='constant', constant_values=0)
-                frame_lens[i] = seq_len
-                mask = np.zeros(max_sequence_len, dtype=np.bool_)
-                mask[:seq_len] = True
-                inputMasks.append(mask)
+            if not session_records:
+                logger.info(f"No valid trials kept for session {sessionName} in partition {partIdx}")
+                continue
 
-        # Convert to dict of data
-        session_data = {
-            'inputFeatures': input_features,
-            'brainfeatureMasks': inputMasks,
-            'phonemeTokens': phoneme_tokens,
-            'phonemeMasks': phoneme_masks,
-            'transcriptions': transcriptions,
-            'frameLens': frame_lens
-        }
-        logger.info(f'Preprocessed {len(input_features)} trials for session {sessionName} in partition {partNames[partIdx]}')
-        os.makedirs(outputFolder, exist_ok=True)
-        output_path = os.path.join(outputFolder, f'{sessionName}_data.pt')
-        torch.save(session_data, output_path)
-        logger.info(f'Saved preprocessed data to {output_path}')
+            logger.info(f'Normalizing features block-wise for session {sessionName} in partition {partIdx}')
+            block_to_record_idxs = {}
+            for rec_idx, rec in enumerate(session_records):
+                block_to_record_idxs.setdefault(rec['block'], []).append(rec_idx)
+
+            for record_idxs in block_to_record_idxs.values():
+                block_tx_features = np.concatenate([session_records[r]['tx1'] for r in record_idxs], axis=0)
+                tx_mean = np.mean(block_tx_features, axis=0, keepdims=True)
+                tx_std = np.std(block_tx_features, axis=0, keepdims=True)
+
+                block_spike_features = np.concatenate([session_records[r]['spikePow'] for r in record_idxs], axis=0)
+                spike_mean = np.mean(block_spike_features, axis=0, keepdims=True)
+                spike_std = np.std(block_spike_features, axis=0, keepdims=True)
+
+                for r in record_idxs:
+                    session_records[r]['tx1'] = (session_records[r]['tx1'] - tx_mean) / (tx_std + 1e-8)
+                    session_records[r]['spikePow'] = (session_records[r]['spikePow'] - spike_mean) / (spike_std + 1e-8)
+
+            logger.info(f'Reshaping and padding features for session {sessionName} in partition {partIdx}')
+            for rec in session_records:
+                tx1_map = rec['tx1'][:, ROWS]
+                spike_map = rec['spikePow'][:, ROWS]
+                feature = np.stack([tx1_map, spike_map], axis=-1).astype(np.float32, copy=False)
+
+                seq_len = rec['frame_len']
+                padded_feature = np.zeros((max_seq_len, 16, 8, 2), dtype=np.float32)
+                padded_feature[:seq_len] = feature
+
+                input_mask = np.zeros((max_seq_len,), dtype=np.bool_)
+                input_mask[:seq_len] = True
+
+                total_input_features.append(padded_feature)
+                total_inputMasks.append(input_mask)
+                total_phoneme_tokens.append(rec['phoneme_tokens'])
+                total_phoneme_masks.append(rec['phoneme_mask'])
+                total_transcriptions.append(rec['sentence'])
+                total_frame_lens.append(seq_len)
+
+            logger.info(f'Preprocessed {len(session_records)} trials for session {sessionName} in partition {partIdx}')
+
+        if total_input_features:
+            total_input_features = np.stack(total_input_features, axis=0)
+            total_inputMasks = np.stack(total_inputMasks, axis=0)
+            total_phoneme_tokens = np.stack(total_phoneme_tokens, axis=0)
+            total_phoneme_masks = np.stack(total_phoneme_masks, axis=0)
+            total_transcriptions = np.array(total_transcriptions, dtype=object)
+            total_frame_lens = np.asarray(total_frame_lens, dtype=np.int32)
+        else:
+            total_input_features = np.zeros((0, max_seq_len, 16, 8, 2), dtype=np.float32)
+            total_inputMasks = np.zeros((0, max_seq_len), dtype=np.bool_)
+            total_phoneme_tokens = np.zeros((0, max_phoneme_len), dtype=np.int32)
+            total_phoneme_masks = np.zeros((0, max_phoneme_len), dtype=np.bool_)
+            total_transcriptions = np.array([], dtype=object)
+            total_frame_lens = np.zeros((0,), dtype=np.int32)
+
+        logger.info(f"Processed {len(total_input_features)} brain sequences.")
+
+        output_path = os.path.join(output_dir, "brain_data.npz")
+        np.savez_compressed(
+            output_path,
+            input_features=total_input_features,
+            inputMasks=total_inputMasks,
+            phoneme_tokens=total_phoneme_tokens,
+            phoneme_masks=total_phoneme_masks,
+            transcriptions=total_transcriptions,
+            frame_lens=total_frame_lens,
+            max_phoneme_len=max_phoneme_len,
+        )
+        logger.info(f"Brain preprocessing for {partIdx} completed. Data saved to {output_path}")
 
 def g2p_transcription(sentence):
     """
@@ -263,20 +288,18 @@ def g2p_transcription(sentence):
         list: List of phonemes.
     """
     tokenized_sentence = []
-    g2p = G2p()
     sentence = re.sub(r'[^a-zA-Z\- \']', '', sentence)  # Remove punctuation except hyphens and apostrophes
     sentence = sentence.replace('--', '').lower()
-    phonemes = g2p(sentence)
+    phonemes = G2P_ENGINE(sentence)
     for phoneme in phonemes:
         if phoneme not in PHONE_TO_ID:
             logger.warning(f'Phoneme {phoneme} not in PHONE_TO_ID mapping.')
         else:
             tokenized_sentence.append(PHONE_TO_ID[phoneme])
     tokenized_sentence.append(PHONE_TO_ID['<eos>'])
-    return phonemes
+    return tokenized_sentence
 
 if __name__ == "__main__":
-
     if TOLERABLE_SEQ_LEN is None:
         logger.info(f"Default tolerable sequence length not found, using percentile: {TOLERABLE_SEQ_PERCENTILE}")
         max_sequence_len, seq_lengths = find_max_seq_len(COMPETITION_DATA_DIR,
@@ -286,6 +309,13 @@ if __name__ == "__main__":
     else:
         max_sequence_len = int(TOLERABLE_SEQ_LEN)
         logger.info(f'Using provided tolerable_seq_len: {max_sequence_len}')
+
+    preprocess_2D(
+        dataPath=COMPETITION_DATA_DIR,
+        outputFolder=PREPROCESSED_DATA_DIR,
+        max_seq_len=max_sequence_len,
+        max_phoneme_len=MAX_PHONEME_LEN,
+    )
 
 
     
