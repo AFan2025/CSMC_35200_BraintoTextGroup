@@ -4,7 +4,7 @@ import torch
 from g2p_en import G2p
 from torch.utils.data import Dataset, DataLoader
 import os
-from diffusionNeuralDecoder.datasets.speechDataset import PHONE_DEF_SIL, PHONE_TO_ID
+from diffusionNeuralDecoder.datasets.speechDataset import PHONE_TO_ID
 from torch.utils.data import Dataset, DataLoader
 from dotenv import load_dotenv
 import logging

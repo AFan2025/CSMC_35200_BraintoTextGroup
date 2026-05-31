@@ -300,7 +300,8 @@ def g2p_transcription(sentence):
             logger.warning(f'Phoneme {phoneme} not in PHONE_TO_ID mapping.')
         else:
             tokenized_sentence.append(PHONE_TO_ID[phoneme])
-    tokenized_sentence.append(PHONE_TO_ID['<eos>'])
+    tokenized_sentence.append(PHONE_TO_ID['<s>'])
+    tokenized_sentence.insert(0, '<s>')
     return tokenized_sentence
 
 if __name__ == "__main__":
