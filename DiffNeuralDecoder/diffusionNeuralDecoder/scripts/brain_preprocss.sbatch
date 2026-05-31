@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=10G
 #SBATCH --time=2:00:00
-#SBATCH --output=logs/%j.out
-#SBATCH --error=logs/%j.err
+#SBATCH --output=logs/preprocess%j.out
+#SBATCH --error=logs/preprocess%j.err
 
 eval "$(micromamba shell hook --shell bash)"
 micromamba activate neuralDecoder_env
