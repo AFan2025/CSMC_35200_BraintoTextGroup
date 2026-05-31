@@ -46,6 +46,9 @@ if __name__ == "__main__":
             logger.info(f"Processing line: {i}")
         phoneme_sequence = g2p(line)
 
+        phoneme_sequence.append('</s>') # adding start and end tokens
+        phoneme_sequence.insert(0, '<s>') #adding start and end tokens
+
         #making sure nothings is too long
         if len(phoneme_sequence) > max_phoneme_len:
             continue
@@ -57,9 +60,17 @@ if __name__ == "__main__":
         if len(phoneme_sequence) < max_phoneme_len:
             phoneme_sequence = phoneme_sequence + ['<pad>'] * (max_phoneme_len - len(phoneme_sequence))
         
-        phoneme_ids = np.array([PHONE_TO_ID.get(p, PHONE_TO_ID['<pad>']) for p in phoneme_sequence])
+        # phoneme_ids = np.array([PHONE_TO_ID.get(p, PHONE_TO_ID['<unk>']) for p in phoneme_sequence])
+        phoneme_ids = []
+        for p in phoneme_sequence:
+            pid = PHONE_TO_ID.get(p)
+            if pid is None:
+                pid = PHONE_TO_ID.get('<unk>')
+                logger.info(f"unable to find phoneme {p} in tokenizer dict") #logging failures
+            phoneme_ids.append(pid)
 
-        phoneme_data.append(phoneme_ids)
+
+        phoneme_data.append(np.array(phoneme_ids, dtype=np.int32))
         phoneme_mask_data.append(phoneme_mask)
 
     #converting to numpy arrays
@@ -68,7 +79,7 @@ if __name__ == "__main__":
     logger.info(f"Processed {len(phoneme_data)} phoneme sequences.")
 
     #saving preprocessed data
-    output_dir_path = os.path.join(output_dir, "phoneme_data.npz")
+    output_dir_path = os.path.join(output_dir, "phoneme_data_fixed.npz")
     np.savez_compressed(
         output_dir_path,
         phoneme_data=phoneme_data,        # (N, max_phoneme_len) int16

@@ -3,51 +3,54 @@ import torch
 from torch.utils.data import Dataset
 import os
 
-PHONE_DEF = [
-    'AA', 'AE', 'AH', 'AO', 'AW',
-    'AY', 'B',  'CH', 'D', 'DH',
-    'EH', 'ER', 'EY', 'F', 'G',
-    'HH', 'IH', 'IY', 'JH', 'K',
-    'L', 'M', 'N', 'NG', 'OW',
-    'OY', 'P', 'R', 'S', 'SH',
-    'T', 'TH', 'UH', 'UW', 'V',
-    'W', 'Y', 'Z', 'ZH'
-]
+# PHONE_DEF = [
+#     'AA', 'AE', 'AH', 'AO', 'AW',
+#     'AY', 'B',  'CH', 'D', 'DH',
+#     'EH', 'ER', 'EY', 'F', 'G',
+#     'HH', 'IH', 'IY', 'JH', 'K',
+#     'L', 'M', 'N', 'NG', 'OW',
+#     'OY', 'P', 'R', 'S', 'SH',
+#     'T', 'TH', 'UH', 'UW', 'V',
+#     'W', 'Y', 'Z', 'ZH'
+# ]
 
-PHONE_DEF_SIL = [
-    '<pad>','AA', 'AE', 'AH', 'AO', 'AW',
-    'AY', 'B',  'CH', 'D', 'DH',
-    'EH', 'ER', 'EY', 'F', 'G',
-    'HH', 'IH', 'IY', 'JH', 'K',
-    'L', 'M', 'N', 'NG', 'OW',
-    'OY', 'P', 'R', 'S', 'SH',
-    'T', 'TH', 'UH', 'UW', 'V',
-    'W', 'Y', 'Z', 'ZH', ' ', '<eos>'
-]
+# PHONE_DEF_SIL = [
+#     '<pad>','AA', 'AE', 'AH', 'AO', 'AW',
+#     'AY', 'B',  'CH', 'D', 'DH',
+#     'EH', 'ER', 'EY', 'F', 'G',
+#     'HH', 'IH', 'IY', 'JH', 'K',
+#     'L', 'M', 'N', 'NG', 'OW',
+#     'OY', 'P', 'R', 'S', 'SH',
+#     'T', 'TH', 'UH', 'UW', 'V',
+#     'W', 'Y', 'Z', 'ZH', ' ', '<eos>'
+# ]
 
-PHONE_TO_ID = {phone: idx for idx, phone in enumerate(PHONE_DEF_SIL)}
+PHONEMES = ['<pad>', '<unk>', '<s>', '</s>', 'AA0', 'AA1', 'AA2', 'AE0', 'AE1', 'AE2', 'AH0', 'AH1', 'AH2', 'AO0', 'AO1', 'AO2', 'AW0', 'AW1', 'AW2', 'AY0', 'AY1', 'AY2', 'B', 'CH', 'D', 'DH', 'EH0', 'EH1', 'EH2', 'ER0', 'ER1', 'ER2', 'EY0', 'EY1', 'EY2', 'F', 'G', 'HH', 'IH0', 'IH1', 'IH2', 'IY0', 'IY1', 'IY2', 'JH', 'K', 'L', 'M', 'N', 'NG', 'OW0', 'OW1', 'OW2', 'OY0', 'OY1', 'OY2', 'P', 'R', 'S', 'SH', 'T', 'TH', 'UH0', 'UH1', 'UH2', 'UW', 'UW0', 'UW1', 'UW2', 'V', 'W', 'Y', 'Z', 'ZH'] 
+PHONE_TO_ID = {phone: idx for idx, phone in enumerate(PHONEMES)}
 
-CHANG_PHONE_DEF = [
-    'AA', 'AE', 'AH', 'AW',
-    'AY', 'B',  'D', 'DH',
-    'EH', 'ER', 'EY', 'F', 'G',
-    'HH', 'IH', 'IY', 'K',
-    'L', 'M', 'N', 'NG', 'OW',
-    'P', 'R', 'S',
-    'T', 'TH', 'UH', 'UW', 'V',
-    'W', 'Y', 'Z'
-]
+# PHONE_TO_ID = {phone: idx for idx, phone in enumerate(PHONE_DEF_SIL)}
 
-CONSONANT_DEF = ['CH', 'SH', 'JH', 'R', 'B',
-                 'M',  'W',  'V',  'F', 'P',
-                 'D',  'N',  'L',  'S', 'T',
-                 'Z',  'TH', 'G',  'Y', 'HH',
-                 'K', 'NG', 'ZH', 'DH']
-VOWEL_DEF = ['EY', 'AE', 'AY', 'EH', 'AA',
-             'AW', 'IY', 'IH', 'OY', 'OW',
-             'AO', 'UH', 'AH', 'UW', 'ER']
+# CHANG_PHONE_DEF = [
+#     'AA', 'AE', 'AH', 'AW',
+#     'AY', 'B',  'D', 'DH',
+#     'EH', 'ER', 'EY', 'F', 'G',
+#     'HH', 'IH', 'IY', 'K',
+#     'L', 'M', 'N', 'NG', 'OW',
+#     'P', 'R', 'S',
+#     'T', 'TH', 'UH', 'UW', 'V',
+#     'W', 'Y', 'Z'
+# ]
 
-SIL_DEF = ['SIL']
+# CONSONANT_DEF = ['CH', 'SH', 'JH', 'R', 'B',
+#                  'M',  'W',  'V',  'F', 'P',
+#                  'D',  'N',  'L',  'S', 'T',
+#                  'Z',  'TH', 'G',  'Y', 'HH',
+#                  'K', 'NG', 'ZH', 'DH']
+# VOWEL_DEF = ['EY', 'AE', 'AY', 'EH', 'AA',
+#              'AW', 'IY', 'IH', 'OY', 'OW',
+#              'AO', 'UH', 'AH', 'UW', 'ER']
+
+# SIL_DEF = ['SIL']
 
 class BrainToTextDataset(Dataset):
     """
