@@ -295,13 +295,13 @@ def g2p_transcription(sentence):
     sentence = re.sub(r'[^a-zA-Z\- \']', '', sentence)  # Remove punctuation except hyphens and apostrophes
     sentence = sentence.replace('--', '').lower()
     phonemes = G2P_ENGINE(sentence)
+    phonemes.append('</s>')
+    phonemes.insert(0,'<s>')
     for phoneme in phonemes:
         if phoneme not in PHONE_TO_ID:
             logger.warning(f'Phoneme {phoneme} not in PHONE_TO_ID mapping.')
         else:
             tokenized_sentence.append(PHONE_TO_ID[phoneme])
-    tokenized_sentence.append(PHONE_TO_ID['<s>'])
-    tokenized_sentence.insert(0, '<s>')
     return tokenized_sentence
 
 if __name__ == "__main__":
