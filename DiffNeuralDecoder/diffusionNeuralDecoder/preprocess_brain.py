@@ -28,8 +28,12 @@ ROWS = np.array([
 ]).T #originally columns but rows seem easier for indexing, Shape (16, 8)
 
 TOLERABLE_SEQ_LEN = os.getenv('TOLERABLE_SEQ_LEN', None)  #extra tolerance length when finding max sequence length for brain data
-TOLERABLE_SEQ_PERCENTILE = os.getenv('TOLERABLE_SEQ_PERCENTILE', 95)  #percentile for tolerable sequence length if MAX_SEQ_LEN not set
+TOLERABLE_SEQ_PERCENTILE = float(os.getenv('TOLERABLE_SEQ_PERCENTILE', 95))  #percentile for tolerable sequence length if MAX_SEQ_LEN not set
 MAX_PHONEME_LEN = int(os.getenv("MAX_PHONEME_LEN", 128))
+
+logger.info(f"tolerable sequence len provided is {TOLERABLE_SEQ_LEN}")
+logger.info(f"tolerable sequence percentage is {TOLERABLE_SEQ_PERCENTILE}")
+logger.info(f"max phoneme len is {MAX_PHONEME_LEN}")
 
 def ensure_nltk_data():
     """Download NLTK data if not already present."""
@@ -44,7 +48,7 @@ def ensure_nltk_data():
 ensure_nltk_data()
 G2P_ENGINE = G2p()
 
-def find_max_seq_len(competition_data_dir=COMPETITION_DATA_DIR, tolerable_len=None, tolerable_percentile=95):
+def find_max_seq_len(competition_data_dir=COMPETITION_DATA_DIR, tolerable_len=None, tolerable_percentile: float =95):
     """
     Find the maximum sequence length across all .mat files in the Brain-to-Text competition dataset.
     Assumes that data is organized in train, test, and competitionHoldOut folders.
