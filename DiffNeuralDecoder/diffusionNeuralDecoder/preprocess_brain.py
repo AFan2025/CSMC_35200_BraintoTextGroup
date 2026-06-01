@@ -304,28 +304,77 @@ def g2p_transcription(sentence):
             tokenized_sentence.append(PHONE_TO_ID[phoneme])
     return tokenized_sentence
 
-def preprocess_2D_sharded(dataPath, outputFolder, max_seq_len = 512, max_phoneme_len=128):
+def preprocess_2D_sharded(partitions: list,
+                          dataPath, 
+                          outputFolder, 
+                          max_seq_len=512, 
+                          max_phoneme_len=128, 
+                          shard_size=500):
     """
-    This method is for sharding the preprocessing step for train files due to the extreme memory requirement of how large those files are. NP consistently crashes
-    or corrupts due to the the size.
-    """
-    partNames = ['train']
-    
-    for partIdx in partNames:
+    Preprocess and shard large partitions (e.g. train) into multiple .npz files.
+    Each shard contains at most shard_size trials. Shards are flushed only after a
+    complete session is processed so that no block is ever split across shards
+    (block-wise normalization is fully applied within a session before any write).
 
+    Output files are named:  <outputFolder>/<partIdx>/brain_data_shard_NNNN.npz
+    A manifest file          <outputFolder>/<partIdx>/shard_manifest.txt
+    is also written listing each shard path and its trial count, one line per shard:
+        brain_data_shard_0000.npz\t<n_trials>
+    """
+
+    for partIdx in partitions:
         output_dir = os.path.join(outputFolder, partIdx)
         os.makedirs(output_dir, exist_ok=True)
 
-        # Flat lists are much faster to stack than nested session-level object lists.
-        total_input_features = []
-        total_inputMasks = []
-        total_phoneme_tokens = []
-        total_phoneme_masks = []
-        total_transcriptions = []
-        total_frame_lens = []
+        # Per-shard accumulation buffers.
+        buf_input_features = []
+        buf_inputMasks = []
+        buf_phoneme_tokens = []
+        buf_phoneme_masks = []
+        buf_transcriptions = []
+        buf_frame_lens = []
+        shard_idx = 0
+        manifest_entries = []
 
-        part_dir = os.path.join(dataPath, partIdx)
+        def _flush_shard():
+            nonlocal shard_idx
+            if not buf_input_features:
+                return
+            arr_input      = np.stack(buf_input_features, axis=0)
+            arr_masks      = np.stack(buf_inputMasks, axis=0)
+            arr_phoneme    = np.stack(buf_phoneme_tokens, axis=0)
+            arr_ph_masks   = np.stack(buf_phoneme_masks, axis=0)
+            arr_text       = np.array(buf_transcriptions, dtype=object)
+            arr_frame_lens = np.asarray(buf_frame_lens, dtype=np.int32)
+
+            shard_name = f"brain_data_shard_{shard_idx:04d}.npz"
+            out_path   = os.path.join(output_dir, shard_name)
+            np.savez(
+                out_path,
+                input_features=arr_input,
+                inputMasks=arr_masks,
+                phoneme_tokens=arr_phoneme,
+                phoneme_masks=arr_ph_masks,
+                transcriptions=arr_text,
+                frame_lens=arr_frame_lens,
+                max_phoneme_len=max_phoneme_len,
+            )
+            manifest_entries.append((shard_name, len(buf_input_features)))
+            logger.info(
+                f"[{partIdx}] Saved shard {shard_idx:04d} "
+                f"({len(buf_input_features)} trials) → {out_path}"
+            )
+            buf_input_features.clear()
+            buf_inputMasks.clear()
+            buf_phoneme_tokens.clear()
+            buf_phoneme_masks.clear()
+            buf_transcriptions.clear()
+            buf_frame_lens.clear()
+            shard_idx += 1
+
+        part_dir   = os.path.join(dataPath, partIdx)
         names_list = sorted(os.listdir(part_dir))
+
         for sessionName in names_list:
             if sessionName.endswith(".txt"):
                 logger.info(f"skipping {sessionName}")
@@ -335,15 +384,15 @@ def preprocess_2D_sharded(dataPath, outputFolder, max_seq_len = 512, max_phoneme
             if not os.path.isfile(sessionPath):
                 continue
 
-            dat = scipy.io.loadmat(sessionPath)
+            dat       = scipy.io.loadmat(sessionPath)
             blockNums = np.squeeze(dat['blockIdx']).astype(np.int32)
-            n_trials = dat['sentenceText'].shape[0]
+            n_trials  = dat['sentenceText'].shape[0]
 
             session_records = []
 
-            # Collect valid trials first so normalization only touches kept examples.
+            # Collect valid trials for this session.
             for i in range(n_trials):
-                tx1 = dat['tx1'][0, i][:, 0:128]
+                tx1      = dat['tx1'][0, i][:, 0:128]
                 spikePow = dat['spikePow'][0, i][:, 0:128]
 
                 assert tx1.shape[0] == spikePow.shape[0]
@@ -351,99 +400,94 @@ def preprocess_2D_sharded(dataPath, outputFolder, max_seq_len = 512, max_phoneme
                 if seq_len >= max_seq_len:
                     continue
 
-                sentence = str(np.squeeze(dat['sentenceText'][i])).strip()
+                sentence    = str(np.squeeze(dat['sentenceText'][i])).strip()
                 phoneme_ids = g2p_transcription(sentence)
 
                 phoneme_array = np.full((max_phoneme_len,), PHONE_TO_ID['<pad>'], dtype=np.int16)
-                phoneme_mask = np.zeros((max_phoneme_len,), dtype=np.bool_)
+                phoneme_mask  = np.zeros((max_phoneme_len,), dtype=np.bool_)
                 valid_phoneme_len = min(len(phoneme_ids), max_phoneme_len)
                 if valid_phoneme_len > 0:
                     phoneme_array[:valid_phoneme_len] = np.asarray(phoneme_ids[:valid_phoneme_len], dtype=np.int16)
-                    phoneme_mask[:valid_phoneme_len] = True
+                    phoneme_mask[:valid_phoneme_len]  = True
 
                 session_records.append({
-                    'tx1': tx1,
-                    'spikePow': spikePow,
-                    'sentence': sentence,
+                    'tx1':            tx1,
+                    'spikePow':       spikePow,
+                    'sentence':       sentence,
                     'phoneme_tokens': phoneme_array,
-                    'phoneme_mask': phoneme_mask,
-                    'frame_len': seq_len,
-                    'block': int(blockNums[i]),
+                    'phoneme_mask':   phoneme_mask,
+                    'frame_len':      seq_len,
+                    'block':          int(blockNums[i]),
                 })
 
             if not session_records:
                 logger.info(f"No valid trials kept for session {sessionName} in partition {partIdx}")
                 continue
 
+            # Block-wise normalization — must complete before any write.
             logger.info(f'Normalizing features block-wise for session {sessionName} in partition {partIdx}')
-            block_to_record_idxs = {}
+            block_to_record_idxs: dict = {}
             for rec_idx, rec in enumerate(session_records):
                 block_to_record_idxs.setdefault(rec['block'], []).append(rec_idx)
 
             for record_idxs in block_to_record_idxs.values():
-                block_tx_features = np.concatenate([session_records[r]['tx1'] for r in record_idxs], axis=0)
-                tx_mean = np.mean(block_tx_features, axis=0, keepdims=True)
-                tx_std = np.std(block_tx_features, axis=0, keepdims=True)
+                block_tx    = np.concatenate([session_records[r]['tx1']      for r in record_idxs], axis=0)
+                tx_mean     = np.mean(block_tx, axis=0, keepdims=True)
+                tx_std      = np.std(block_tx,  axis=0, keepdims=True)
 
-                block_spike_features = np.concatenate([session_records[r]['spikePow'] for r in record_idxs], axis=0)
-                spike_mean = np.mean(block_spike_features, axis=0, keepdims=True)
-                spike_std = np.std(block_spike_features, axis=0, keepdims=True)
+                block_spike = np.concatenate([session_records[r]['spikePow'] for r in record_idxs], axis=0)
+                spike_mean  = np.mean(block_spike, axis=0, keepdims=True)
+                spike_std   = np.std(block_spike,  axis=0, keepdims=True)
 
                 for r in record_idxs:
-                    session_records[r]['tx1'] = (session_records[r]['tx1'] - tx_mean) / (tx_std + 1e-8)
-                    session_records[r]['spikePow'] = (session_records[r]['spikePow'] - spike_mean) / (spike_std + 1e-8)
+                    session_records[r]['tx1']      = (session_records[r]['tx1']      - tx_mean)    / (tx_std    + 1e-8)
+                    session_records[r]['spikePow']  = (session_records[r]['spikePow'] - spike_mean) / (spike_std + 1e-8)
 
+            # Reshape, pad, and append to the current shard buffer.
             logger.info(f'Reshaping and padding features for session {sessionName} in partition {partIdx}')
             for rec in session_records:
-                tx1_map = rec['tx1'][:, ROWS]
+                tx1_map   = rec['tx1'][:, ROWS]
                 spike_map = rec['spikePow'][:, ROWS]
-                feature = np.stack([tx1_map, spike_map], axis=-1).astype(np.float16, copy=False)
+                feature   = np.stack([tx1_map, spike_map], axis=-1).astype(np.float16, copy=False)
 
-                seq_len = rec['frame_len']
+                seq_len        = rec['frame_len']
                 padded_feature = np.zeros((max_seq_len, 16, 8, 2), dtype=np.float16)
                 padded_feature[:seq_len] = feature
 
-                input_mask = np.zeros((max_seq_len,), dtype=np.bool_)
+                input_mask           = np.zeros((max_seq_len,), dtype=np.bool_)
                 input_mask[:seq_len] = True
 
-                total_input_features.append(padded_feature)
-                total_inputMasks.append(input_mask)
-                total_phoneme_tokens.append(rec['phoneme_tokens'])
-                total_phoneme_masks.append(rec['phoneme_mask'])
-                total_transcriptions.append(rec['sentence'])
-                total_frame_lens.append(seq_len)
+                buf_input_features.append(padded_feature)
+                buf_inputMasks.append(input_mask)
+                buf_phoneme_tokens.append(rec['phoneme_tokens'])
+                buf_phoneme_masks.append(rec['phoneme_mask'])
+                buf_transcriptions.append(rec['sentence'])
+                buf_frame_lens.append(seq_len)
 
-            logger.info(f'Preprocessed {len(session_records)} trials for session {sessionName} in partition {partIdx}')
+            logger.info(
+                f'Preprocessed {len(session_records)} trials for session {sessionName} in partition {partIdx} '
+                f'(shard buffer: {len(buf_input_features)} / {shard_size})'
+            )
 
-        if total_input_features:
-            total_input_features = np.stack(total_input_features, axis=0)
-            total_inputMasks = np.stack(total_inputMasks, axis=0)
-            total_phoneme_tokens = np.stack(total_phoneme_tokens, axis=0)
-            total_phoneme_masks = np.stack(total_phoneme_masks, axis=0)
-            total_transcriptions = np.array(total_transcriptions, dtype=object)
-            total_frame_lens = np.asarray(total_frame_lens, dtype=np.int32)
-        else:
-            total_input_features = np.zeros((0, max_seq_len, 16, 8, 2), dtype=np.float16)
-            total_inputMasks = np.zeros((0, max_seq_len), dtype=np.bool_)
-            total_phoneme_tokens = np.zeros((0, max_phoneme_len), dtype=np.int32)
-            total_phoneme_masks = np.zeros((0, max_phoneme_len), dtype=np.bool_)
-            total_transcriptions = np.array([], dtype=object)
-            total_frame_lens = np.zeros((0,), dtype=np.int32)
+            # Flush once the buffer reaches the shard size. We only do this at a
+            # session boundary so no block is ever divided between two shards.
+            if len(buf_input_features) >= shard_size:
+                _flush_shard()
 
-        logger.info(f"Processed {len(total_input_features)} brain sequences.")
+        # Flush any remaining trials in the buffer.
+        _flush_shard()
 
-        output_path = os.path.join(output_dir, "brain_data.npz")
-        np.savez(
-            output_path,
-            input_features=total_input_features,
-            inputMasks=total_inputMasks,
-            phoneme_tokens=total_phoneme_tokens,
-            phoneme_masks=total_phoneme_masks,
-            transcriptions=total_transcriptions,
-            frame_lens=total_frame_lens,
-            max_phoneme_len=max_phoneme_len,
+        # Write the manifest so downstream code can discover shards without glob.
+        manifest_path = os.path.join(output_dir, "shard_manifest.txt")
+        with open(manifest_path, "w") as f:
+            for shard_name, n in manifest_entries:
+                f.write(f"{shard_name}\t{n}\n")
+        total_trials = sum(n for _, n in manifest_entries)
+        logger.info(
+            f"Brain preprocessing for {partIdx} completed. "
+            f"{shard_idx} shards, {total_trials} total trials. "
+            f"Manifest: {manifest_path}"
         )
-        logger.info(f"Brain preprocessing for {partIdx} completed. Data saved to {output_path}")
 
 
 if __name__ == "__main__":
@@ -464,6 +508,10 @@ if __name__ == "__main__":
     #     max_seq_len=max_sequence_len,
     #     max_phoneme_len=MAX_PHONEME_LEN,
     # )
-
-
+    preprocess_2D_sharded(["train"],
+                          dataPath=COMPETITION_DATA_DIR,
+                          outputFolder=PREPROCESSED_DATA_DIR, 
+                          max_seq_len=max_sequence_len, 
+                          max_phoneme_len=MAX_PHONEME_LEN, 
+                          shard_size=500)
     
