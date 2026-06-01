@@ -178,7 +178,7 @@ def main(args):
 
     # diffusion scheduler but for inference time
     diffusion_scheduler = create_diffusion(
-        timestep_respacing="", #maybe should be different for test inference?
+        timestep_respacing="ddim50", #maybe should be different for test inference?
         noise_schedule=DIFFUSION_NOISE_SCHEDULE,
         learn_sigma=False,
         sigma_small=True,
