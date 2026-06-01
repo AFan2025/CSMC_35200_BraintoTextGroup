@@ -25,7 +25,7 @@ load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 # Modules
 from diffusion_model import PhonemeDiT
 from diffusion import create_diffusion
-from diffusionNeuralDecoder.datasets.speechDataset import BrainToTextDataset
+from diffusionNeuralDecoder.datasets.speechDataset import BrainToTextDataset, ID_TO_PHONE
 from scripts.pretrain import (
     _get_env,
     _resolve_path,
@@ -162,13 +162,15 @@ def main(args):
 
                 # Unconditional model still uses the same forward signature; brain inputs are None.
                 pred = model(noise, noise_mask, t, None, None)
-                phoneme_seq = model.decode_tok(pred)
+                token_id_seq = model.decode_tok(pred)
+                phoneme_seq = [ID_TO_PHONE[out] for out in token_id_seq[0].detach().cpu().tolist()]
 
                 if sample_idx <= args.print_first_n_samples:
                     logger.info(
-                        "[unconditional] sample=%d token_ids=%s",
+                        "[unconditional] sample=%d token_ids=%s sequence=%s",
                         sample_idx,
-                        phoneme_seq[0].detach().cpu().tolist(),
+                        token_id_seq[0].detach().cpu().tolist(),
+                        phoneme_seq,
                     )
 
                 if sample_idx % args.log_every == 0:
