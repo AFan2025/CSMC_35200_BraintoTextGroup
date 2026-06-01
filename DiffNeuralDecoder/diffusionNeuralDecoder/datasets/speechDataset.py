@@ -143,7 +143,7 @@ class BrainToTextDataset(Dataset):
             transcription = str(self._transcriptions[idx])
 
         return {
-            'input_features': torch.from_numpy(np.array(input_feat, dtype=np.float32)),
+            'input_features': torch.from_numpy(np.array(input_feat, dtype=np.float32)).permute(0,3,1,2),
             'input_mask':     torch.from_numpy(np.array(input_mask,  dtype=bool)),
             'phoneme_tokens': torch.from_numpy(np.array(phoneme_tok, dtype=np.int64)),
             'phoneme_mask':   torch.from_numpy(np.array(phoneme_mask, dtype=bool)),
