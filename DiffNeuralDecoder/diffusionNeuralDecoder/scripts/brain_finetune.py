@@ -309,7 +309,7 @@ def main(args):
         mlp_ratio=MLP_RATIO,
         use_cross_attention=True,  # now True
         z_brain_dim=Z_BRAIN_DIM,
-        use_final_layer=True).to(device)
+        use_final_layer=False).to(device)
 
     pretrain_ckpt_path = _resolve_path(BASE_DIR, _get_env("PRETRAIN_CHECKPOINT", default=os.path.join(CHECKPOINT_DIR, "best.pt")))
     pretrained = torch.load(pretrain_ckpt_path, map_location="cpu")
@@ -332,7 +332,9 @@ def main(args):
     )
     logging.info("Diffusion scheduler created with noise schedule: %s", DIFFUSION_NOISE_SCHEDULE)
 
-    metrics_path = os.path.join(LOG_DIR, "finetune_loss_metrics.csv")
+
+    run_id = int(time())
+    metrics_path = os.path.join(LOG_DIR, f"finetune_loss_metrics_{run_id}.csv")
     _init_or_resume_metrics_file(metrics_path)
     logging.info("Streaming stage train/val metrics to %s", metrics_path)
 
@@ -351,6 +353,38 @@ def main(args):
 
     train_steps = 0
     unfreeze_top_n = 2
+
+    # DEBUG INTERVENTION
+    model_sd = model.state_dict()
+    loaded_count = 0
+    skipped_count = 0
+    for key, val in pretrained['model'].items():
+        if key in model_sd:
+            if val.shape == model_sd[key].shape:
+                loaded_count += 1
+            else:
+                skipped_count += 1
+                logging.info(f"SHAPE MISMATCH: {key} pretrained={val.shape} model={model_sd[key].shape}")
+        else:
+            skipped_count += 1
+            logging.info(f"KEY MISSING in model: {key}")
+
+    logging.info(f"Loaded: {loaded_count}, Skipped: {skipped_count}")
+
+
+    # Quick sanity check after loading
+    logging.info("beginning randomized sanity check")
+    model.eval()
+    with torch.no_grad():
+        fake_ids = torch.randint(0, 75, (4, 30)).to(device)
+        fake_mask = torch.ones(4, 30, dtype=torch.bool).to(device)
+        x = model.embed_tok(fake_ids)
+        t = torch.randint(0, 1000, (4,)).to(device)
+        loss = training_step(model, x, ~fake_mask, t, diffusion_scheduler)
+        logging.info(f"Sanity check loss (should be ~0.001): {loss.item():.6f}")
+
+    return # debugging statement
+
 
     # Step 2 resume path: skip step 1 entirely if a step 2 latest checkpoint exists.
     if os.path.exists(stage_paths["step2_latest"]):
