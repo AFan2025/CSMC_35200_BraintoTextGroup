@@ -307,7 +307,7 @@ def main(args):
         max_len=MAX_TEXT_LEN,
         num_heads=NUM_HEADS,
         mlp_ratio=MLP_RATIO,
-        use_cross_attention=True,  # now True
+        use_cross_attention=False,  # now True
         z_brain_dim=Z_BRAIN_DIM,
         use_final_layer=False).to(device)
 
@@ -347,9 +347,9 @@ def main(args):
         "step2_done": os.path.join(CHECKPOINT_DIR, "finetune_step2_done.pt"),
     }
 
-    if os.path.exists(stage_paths["step2_done"]):
-        logging.info("Step 2 already complete (%s). Nothing to run.", stage_paths["step2_done"])
-        return
+    # if os.path.exists(stage_paths["step2_done"]):
+    #     logging.info("Step 2 already complete (%s). Nothing to run.", stage_paths["step2_done"])
+    #     return
 
     train_steps = 0
     unfreeze_top_n = 2
@@ -376,11 +376,21 @@ def main(args):
     logging.info("beginning randomized sanity check")
     model.eval()
     with torch.no_grad():
-        fake_ids = torch.randint(0, 75, (4, 30)).to(device)
-        fake_mask = torch.ones(4, 30, dtype=torch.bool).to(device)
+        fake_ids = torch.randint(0, 75, (4, 30), device=device)
+        fake_mask = torch.ones(4, 30, dtype=torch.bool, device=device)
+        fake_brain_tensor = torch.rand(4, 100, 2, 16, 8, device=device) * 2 - 1
+        fake_brain_mask = torch.ones(4, 100, dtype=torch.bool, device=device)
         x = model.embed_tok(fake_ids)
-        t = torch.randint(0, 1000, (4,)).to(device)
-        loss = training_step(model, x, ~fake_mask, t, diffusion_scheduler)
+        t = torch.randint(0, 1000, (4,), device=device)
+        loss = training_step(
+            model,
+            x,
+            fake_mask,
+            t,
+            diffusion_scheduler,
+            brain_data=fake_brain_tensor,
+            brain_mask=fake_brain_mask,
+        )
         logging.info(f"Sanity check loss (should be ~0.001): {loss.item():.6f}")
 
     return # debugging statement

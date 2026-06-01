@@ -1,0 +1,5 @@
+2026-05-27 20:27:01,610 - INFO - Dataset contains 45,432 samples (/home/afan2025/Masters/Deep_Learning_Systems/preprocessedData/phoneme_data.npz)
+2026-05-27 20:27:01,610 - INFO - Train split: 40,888, Val split: 4,544
+2026-05-27 20:27:01,610 - INFO - Vocab size of dataset is 42, provided vocab size is 42
+2026-05-27 20:27:13,522 - INFO - Model initiated using device cuda
+2026-05-27 20:27:13,522 - INFO - creating EMA
