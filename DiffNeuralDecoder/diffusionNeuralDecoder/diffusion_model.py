@@ -429,7 +429,7 @@ class DecoderLayer(nn.Module):
 
     def nn_decoding(self, x_clean):
         # Nearest-neighbor in embedding table
-        distances = torch.cdist(x_clean, self.x_embedder.weight)
+        distances = torch.cdist(x_clean, self.embedding_layer.weight)
         return distances.argmin(dim=-1)
 
     def learned_decoding(self, x):

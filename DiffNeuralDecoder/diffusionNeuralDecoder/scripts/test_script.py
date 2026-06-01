@@ -1,18 +1,14 @@
 
 # Libraries
 import logging
-import csv
-import torch
-import numpy as np
 import argparse
 import os
 import sys
-from collections import OrderedDict
+
+import numpy as np
+import torch
 from dotenv import load_dotenv
-from copy import deepcopy
-from tqdm import tqdm
-from time import time
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))        # .../diffusionNeuralDecoder/scripts
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)                      # .../diffusionNeuralDecoder
@@ -29,30 +25,23 @@ load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 # Modules
 from diffusion_model import PhonemeDiT
 from diffusion import create_diffusion
-from diffusionNeuralDecoder.datasets.speechDataset import BrainToTextDataset, PhonemeDataset
+from diffusionNeuralDecoder.datasets.speechDataset import BrainToTextDataset
 from scripts.pretrain import (
     _get_env,
     _resolve_path,
-    requires_grad,
-    root_logger,
-    save_checkpoint,
-    training_step,
 )
 from scripts.brain_finetune import _batch_loss
 
-def _configure_finetune_logger() -> None:
-    os.makedirs(LOG_DIR, exist_ok=True)
-    root_logger.setLevel(logging.INFO)
-    finetune_log = os.path.abspath(os.path.join(LOG_DIR, "test_results.log"))
+def _configure_stdout_logger() -> logging.Logger:
+    logger = logging.getLogger("test_script")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
-    # Add exactly one finetune file handler even if this script is imported/run repeatedly.
-    for handler in root_logger.handlers:
-        if isinstance(handler, logging.FileHandler) and os.path.abspath(handler.baseFilename) == finetune_log:
-            return
-
-    fh = logging.FileHandler(finetune_log)
-    fh.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-    root_logger.addHandler(fh)
+    if not logger.handlers:
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        logger.addHandler(sh)
+    return logger
 
 BASE_DIR = _get_env("BASE_DIR", default=PROJECT_DIR)
 COMPETITION_DATA_DIR = _resolve_path(BASE_DIR, _get_env("COMPETITION_DATA_DIR", default="../../../competition_data"))
@@ -70,14 +59,16 @@ DECODER_METHOD = _get_env("DECODER_METHOD", default="nn")
 DIFFUSION_NOISE_SCHEDULE = _get_env("DIFFUSION_NOISE_SCHEDULE", default="cosine")
 
 def main(args):
-    _configure_finetune_logger()
+    logger = _configure_stdout_logger()
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(LOG_DIR, exist_ok=True)
 
     assert torch.cuda.is_available(), "Using a GPU"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(args.global_seed)
+    np.random.seed(args.global_seed)
 
-    logging.info(f"initializing dataset from partition {args.partition}")
+    logger.info("Initializing dataset from partition %s", args.partition)
     dataset = BrainToTextDataset(data_path=PREPROCESSED_DATA_DIR, partition = args.partition)
 
     data_loader  = DataLoader(
@@ -90,8 +81,8 @@ def main(args):
         persistent_workers=args.num_workers > 0,
     )
 
-    logging.info("Dataset loaded from %s and partition %s", PREPROCESSED_DATA_DIR, args.partition)
-    logging.info("Samples: total=%d %s=%d", len(dataset), args.partition, len(dataset))
+    logger.info("Dataset loaded from %s (%s)", PREPROCESSED_DATA_DIR, args.partition)
+    logger.info("Samples: total=%d", len(dataset))
 
     model = PhonemeDiT(
         d_model=D_MODEL,
@@ -105,16 +96,21 @@ def main(args):
         use_final_layer=False,
         ).to(device)
     
-    if args.conditional == "conditional":
+    if args.checkpoint is not None:
+        checkpoint_name = args.checkpoint
+    elif args.conditional == "conditional":
         checkpoint_name = "finetune_step2_best.pt"
     else:
         checkpoint_name = "best.pt"
     ckpt_path = _resolve_path(BASE_DIR, os.path.join(CHECKPOINT_DIR, checkpoint_name))
+    if not os.path.isfile(ckpt_path):
+        raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
+
     model_checkpoint = torch.load(ckpt_path, map_location="cpu")
     missing, unexpected = model.load_state_dict(model_checkpoint["model"], strict=False)
-    logging.info("Loaded model from %s", ckpt_path)
-    logging.info("Missing keys (expected new finetune modules): %s", missing)
-    logging.info("Unexpected keys: %s", unexpected)
+    logger.info("Loaded model from %s", ckpt_path)
+    logger.info("Missing keys after load: %s", missing)
+    logger.info("Unexpected keys after load: %s", unexpected)
 
     # diffusion scheduler but for inference time
     diffusion_scheduler = create_diffusion(
@@ -124,30 +120,61 @@ def main(args):
         sigma_small=True,
         predict_xstart=False,
     )
-    logging.info("Diffusion scheduler created with noise schedule: %s", DIFFUSION_NOISE_SCHEDULE)
+    logger.info("Diffusion scheduler created with noise schedule: %s", DIFFUSION_NOISE_SCHEDULE)
 
     model.eval()
 
     if args.conditional == "conditional":
+        logger.info("Running conditional eval with brain-conditioned batches")
+        running = 0.0
+        seen = 0
         with torch.no_grad():
-            for batch in data_loader:
+            for step_idx, batch in enumerate(data_loader, start=1):
+                if step_idx == 1:
+                    logger.info(
+                        "First batch shapes: input_features=%s, input_mask=%s, phoneme_tokens=%s, phoneme_mask=%s",
+                        tuple(batch["input_features"].shape),
+                        tuple(batch["input_mask"].shape),
+                        tuple(batch["phoneme_tokens"].shape),
+                        tuple(batch["phoneme_mask"].shape),
+                    )
                 loss = _batch_loss(model, batch, device, diffusion_scheduler)
-    else:
-        with torch.no_grad():
-            for _ in range(100): #just testing to see if it produces proper phoneme groupings
+                running += float(loss.item())
+                seen += 1
 
-                # just a standard forward pass
-                noise = torch.randn((1, 30, D_MODEL), device = device) #doing 1 inference per batch (B, D_MODEL, S)
-                # fake_ids = torch.randint(0, 75, (1, 30), device=device)
-                noise_mask = torch.ones(1, 30, dtype=torch.bool, device=device)
+                if step_idx % args.log_every == 0:
+                    logger.info("[conditional] step=%d avg_loss=%.6f", step_idx, running / seen)
+
+        if seen == 0:
+            logger.warning("No batches were processed. Check partition and batch-size/drop_last settings.")
+        else:
+            logger.info("[conditional] completed batches=%d final_avg_loss=%.6f", seen, running / seen)
+
+    else:
+        logger.info("Running unconditional sanity decode with random latent inputs")
+        with torch.no_grad():
+            for sample_idx in range(1, args.num_unconditional_samples + 1):
+
+                # Use random hidden states as sanity inputs for the unconditional forward path.
+                noise = torch.randn((1, args.unconditional_seq_len, D_MODEL), device=device)
+                noise_mask = torch.ones(1, args.unconditional_seq_len, dtype=torch.bool, device=device)
                 t = torch.randint(0, diffusion_scheduler.num_timesteps, (noise.shape[0],), device=device)
 
-                # run forward pass
-                pred = model(noise, noise_mask, t)
-
+                # Unconditional model still uses the same forward signature; brain inputs are None.
+                pred = model(noise, noise_mask, t, None, None)
                 phoneme_seq = model.decode_tok(pred)
 
-                # output to a file or print to main if using srun over sbatch
+                if sample_idx <= args.print_first_n_samples:
+                    logger.info(
+                        "[unconditional] sample=%d token_ids=%s",
+                        sample_idx,
+                        phoneme_seq[0].detach().cpu().tolist(),
+                    )
+
+                if sample_idx % args.log_every == 0:
+                    logger.info("[unconditional] generated %d/%d samples", sample_idx, args.num_unconditional_samples)
+
+        logger.info("[unconditional] completed %d samples", args.num_unconditional_samples)
 
 
 
@@ -156,9 +183,16 @@ if __name__ == "__main__":
     parser.add_argument("--results-dir", type=str, default="results")
     parser.add_argument("--conditional", type=str, choices=["conditional","unconditional"], default="conditional")
     parser.add_argument("--partition", type=str, choices=["test", "competitionHoldOut"], default="test")
+    parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--global-seed", type=int, default=0)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--log-every", type=int, default=100)
+    parser.add_argument("--num-unconditional-samples", type=int, default=100)
+    parser.add_argument("--unconditional-seq-len", type=int, default=30)
+    parser.add_argument("--print-first-n-samples", type=int, default=3)
     args = parser.parse_args()
     main(args)
+
+# Run command:
+# python scripts/test_script.py --conditional {conditional|unconditional} --partition {test|competitionHoldOut} --batch-size 128 --num-workers 4 --log-every 100 --global-seed 0 --checkpoint <optional_checkpoint_name.pt> --num-unconditional-samples 100 --unconditional-seq-len 30 --print-first-n-samples 3
