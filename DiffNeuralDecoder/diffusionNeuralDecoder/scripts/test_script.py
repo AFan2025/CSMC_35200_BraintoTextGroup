@@ -4,6 +4,7 @@ import logging
 import argparse
 import os
 import sys
+import editdistance
 
 import numpy as np
 import torch
@@ -57,6 +58,69 @@ NUM_HEADS = _get_env("NUM_HEADS", int)
 MLP_RATIO = _get_env("MLP_RATIO", float)
 DECODER_METHOD = _get_env("DECODER_METHOD", default="nn")
 DIFFUSION_NOISE_SCHEDULE = _get_env("DIFFUSION_NOISE_SCHEDULE", default="cosine")
+
+@torch.no_grad()
+def generate_from_brain(model, diffusion, batch, device):
+    model.eval()
+
+    brain_z = batch["input_features"].to(device)
+    brain_mask = batch["input_mask"].to(device)
+    x_real = batch["phoneme_tokens"].to(device)
+    x_mask = batch["phoneme_mask"].to(device)
+
+    B = brain_z.shape[0]
+    
+    # Start from pure noise
+    x = torch.randn(B, MAX_TEXT_LEN, model.d_model, device=device)
+    dummy_mask = torch.ones(B, MAX_TEXT_LEN, dtype=torch.bool, device=device)
+    
+    # # Encode brain signal once
+    # brain_enc = model.brain_encoder(brain_z)
+    # brain_global = brain_enc.mean(dim=1)
+    
+    # Full denoising loop
+    for i in reversed(range(diffusion.num_timesteps)):
+        t = torch.full((B,), i, device=device, dtype=torch.long)
+        
+        # Model predicts noise
+        noise_pred = model(x, dummy_mask, t, brain_z, brain_mask)
+        
+        # Recover x_0 estimate
+        alpha_cumprod = diffusion.alphas_cumprod[i]
+        x_start = (1.0 / np.sqrt(alpha_cumprod)) * x - \
+              (np.sqrt(1.0 - alpha_cumprod) / np.sqrt(alpha_cumprod)) * noise_pred
+        
+        if i > 0:
+            # Posterior step
+            alpha_cumprod_prev = diffusion.alphas_cumprod_prev[i]
+            beta = diffusion.betas[i]
+            coef1 = beta * np.sqrt(alpha_cumprod_prev) / (1.0 - alpha_cumprod)
+            coef2 = (1.0 - alpha_cumprod_prev) * np.sqrt(1.0 - beta) / (1.0 - alpha_cumprod)
+            mean = coef1 * x_start + coef2 * x
+            posterior_var = beta * (1.0 - alpha_cumprod_prev) / (1.0 - alpha_cumprod)
+            x = mean + np.sqrt(posterior_var) * torch.randn_like(x)
+        else:
+            x = x_start
+    
+    # Decode to tokens
+    token_ids = model.decode_tok(x)
+
+    batch_per = []
+    for i in range(len(token_ids)):
+        valid = x_mask[i].bool()
+        seq_len = int(valid.sum().item())
+        if seq_len == 0:
+            return 0.0
+        
+        pred_ids = token_ids[i].tolist()[:seq_len]
+        ref_ids = x_real[i].tolist()[:seq_len]
+        dist = editdistance.eval(pred_ids, ref_ids)
+        per = dist/seq_len
+        batch_per.append(per)
+
+    avg_edit_dist = sum(batch_per) / len(batch_per)
+
+    return avg_edit_dist
 
 def main(args):
     logger = _configure_stdout_logger()
@@ -138,9 +202,10 @@ def main(args):
                         tuple(batch["phoneme_tokens"].shape),
                         tuple(batch["phoneme_mask"].shape),
                     )
-                loss = _batch_loss(model, batch, device, diffusion_scheduler)
-                running += float(loss.item())
-                seen += 1
+                # loss = _batch_loss(model, batch, device, diffusion_scheduler)
+                per = generate_from_brain(model, diffusion_scheduler, batch, device)
+                running += per
+                seen += 1 
 
                 if step_idx % args.log_every == 0:
                     logger.info("[conditional] step=%d avg_loss=%.6f", step_idx, running / seen)
@@ -197,4 +262,4 @@ if __name__ == "__main__":
     main(args)
 
 # Run command:
-# python scripts/test_script.py --conditional {conditional|unconditional} --partition {test|competitionHoldOut} --batch-size 128 --num-workers 4 --log-every 100 --global-seed 0 --checkpoint <optional_checkpoint_name.pt> --num-unconditional-samples 100 --unconditional-seq-len 30 --print-first-n-samples 3
+# python scripts/test_script.py --conditional {conditional|unconditional} --partition {test|competitionHoldOut} --batch-size 128 --num-workers 4 --log-every 100 --global-seed 0 --checkpoint <optional_checkpoint_name.pt> --num-unconditional-samples 100 --unconditional-seq-len 30 --print-first-n-samples 3    
