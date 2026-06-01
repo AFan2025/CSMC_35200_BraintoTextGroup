@@ -302,7 +302,7 @@ def main(args):
 
     model = PhonemeDiT(
         d_model=D_MODEL,
-        vocab_size=VOCAB_SIZE,
+        vocab_size=dataset.vocab_size,
         depth=MODEL_DEPTH,
         max_len=MAX_TEXT_LEN,
         num_heads=NUM_HEADS,

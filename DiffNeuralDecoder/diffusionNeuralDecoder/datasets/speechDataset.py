@@ -69,6 +69,7 @@ class BrainToTextDataset(Dataset):
         self.data_path = data_path
         self.partition = partition
         part_dir = os.path.join(data_path, partition)
+        self.vocab_size = len(PHONEMES)
 
         manifest_path = os.path.join(part_dir, 'shard_manifest.txt')
         if os.path.exists(manifest_path):
