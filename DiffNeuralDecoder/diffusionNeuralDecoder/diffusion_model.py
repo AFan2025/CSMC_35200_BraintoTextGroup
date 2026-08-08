@@ -382,7 +382,7 @@ class PhonemeDiT(nn.Module):
                 nn.init.zeros_(self.final_layer.linear.bias)
 
     def embed_tok(self, x):
-        return self.x_embedder(x) * math.sqrt(self.d_model)
+        return self.x_embedder(x) * math.sqrt(self.d_model) #scaled so that noise doesn't completely overtake noise
     
     @torch.no_grad()
     def decode_tok(self, x):

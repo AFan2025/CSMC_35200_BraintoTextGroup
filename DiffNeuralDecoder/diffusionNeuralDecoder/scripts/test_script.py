@@ -122,6 +122,35 @@ def generate_from_brain(model, diffusion, batch, device):
 
     return avg_edit_dist
 
+
+@torch.no_grad()
+def generate_unconditional(model, diffusion, seq_len, device):
+    model.eval()
+
+    x = torch.randn(1, seq_len, model.d_model, device=device)
+    x_mask = torch.ones(1, seq_len, dtype=torch.bool, device=device)
+
+    for i in reversed(range(diffusion.num_timesteps)):
+        t = torch.full((1,), i, device=device, dtype=torch.long)
+        noise_pred = model(x, x_mask, t, None, None)
+
+        alpha_cumprod = diffusion.alphas_cumprod[i]
+        x_start = (1.0 / np.sqrt(alpha_cumprod)) * x - \
+            (np.sqrt(1.0 - alpha_cumprod) / np.sqrt(alpha_cumprod)) * noise_pred
+
+        if i > 0:
+            alpha_cumprod_prev = diffusion.alphas_cumprod_prev[i]
+            beta = diffusion.betas[i]
+            coef1 = beta * np.sqrt(alpha_cumprod_prev) / (1.0 - alpha_cumprod)
+            coef2 = (1.0 - alpha_cumprod_prev) * np.sqrt(1.0 - beta) / (1.0 - alpha_cumprod)
+            mean = coef1 * x_start + coef2 * x
+            posterior_var = beta * (1.0 - alpha_cumprod_prev) / (1.0 - alpha_cumprod)
+            x = mean + np.sqrt(posterior_var) * torch.randn_like(x)
+        else:
+            x = x_start
+
+    return model.decode_tok(x)
+
 def main(args):
     logger = _configure_stdout_logger()
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
@@ -219,15 +248,12 @@ def main(args):
         logger.info("Running unconditional sanity decode with random latent inputs")
         with torch.no_grad():
             for sample_idx in range(1, args.num_unconditional_samples + 1):
-
-                # Use random hidden states as sanity inputs for the unconditional forward path.
-                noise = torch.randn((1, args.unconditional_seq_len, D_MODEL), device=device)
-                noise_mask = torch.ones(1, args.unconditional_seq_len, dtype=torch.bool, device=device)
-                t = torch.randint(0, diffusion_scheduler.num_timesteps, (noise.shape[0],), device=device)
-
-                # Unconditional model still uses the same forward signature; brain inputs are None.
-                pred = model(noise, noise_mask, t, None, None)
-                token_id_seq = model.decode_tok(pred)
+                token_id_seq = generate_unconditional(
+                    model,
+                    diffusion_scheduler,
+                    args.unconditional_seq_len,
+                    device,
+                )
                 phoneme_seq = [ID_TO_PHONE[out] for out in token_id_seq[0].detach().cpu().tolist()]
 
                 if sample_idx <= args.print_first_n_samples:
