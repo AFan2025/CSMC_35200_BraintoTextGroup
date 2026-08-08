@@ -1,5 +1,626 @@
-2026-05-27 20:27:01,610 - INFO - Dataset contains 45,432 samples (/home/afan2025/Masters/Deep_Learning_Systems/preprocessedData/phoneme_data.npz)
-2026-05-27 20:27:01,610 - INFO - Train split: 40,888, Val split: 4,544
-2026-05-27 20:27:01,610 - INFO - Vocab size of dataset is 42, provided vocab size is 42
-2026-05-27 20:27:13,522 - INFO - Model initiated using device cuda
-2026-05-27 20:27:13,522 - INFO - creating EMA
+2026-05-28 10:00:44,513 - INFO - Dataset contains 45,432 samples (/home/afan2025/Masters/Deep_Learning_Systems/preprocessedData/phoneme_data.npz)
+2026-05-28 10:00:44,513 - INFO - Train split: 40,888, Val split: 4,544
+2026-05-28 10:00:44,513 - INFO - Vocab size of dataset is 42, provided vocab size is 42
+2026-05-28 10:00:44,874 - INFO - Model initiated using device cuda
+2026-05-28 10:00:44,874 - INFO - creating EMA
+2026-05-28 10:00:44,902 - INFO - Diffusion Scheduler created, with linear noise schedule
+2026-05-28 10:00:46,310 - INFO - Streaming train/val metrics to /home/afan2025/Masters/Deep_Learning_Systems/CSMC_35200_BraintoTextGroup/DiffNeuralDecoder/diffusionNeuralDecoder/logs/loss_metrics_1779980446.csv
+2026-05-28 10:00:46,310 - INFO - Training for 200 epochs
+2026-05-28 10:00:46,312 - INFO - Beginning epoch 0
+2026-05-28 10:01:02,472 - INFO - (step=0000100) Train Loss: 0.141387, Train Steps/Sec: 6.19
+2026-05-28 10:01:12,249 - INFO - (epoch=0000) Val Loss: 0.129791
+2026-05-28 10:01:12,797 - INFO - Beginning epoch 1
+2026-05-28 10:01:18,914 - INFO - (step=0000200) Train Loss: 0.130626, Train Steps/Sec: 6.08
+2026-05-28 10:01:33,854 - INFO - (step=0000300) Train Loss: 0.091093, Train Steps/Sec: 6.69
+2026-05-28 10:01:36,509 - INFO - Beginning epoch 2
+2026-05-28 10:01:48,782 - INFO - (step=0000400) Train Loss: 0.050546, Train Steps/Sec: 6.70
+2026-05-28 10:02:00,270 - INFO - Beginning epoch 3
+2026-05-28 10:02:03,736 - INFO - (step=0000500) Train Loss: 0.036959, Train Steps/Sec: 6.69
+2026-05-28 10:02:18,727 - INFO - (step=0000600) Train Loss: 0.030628, Train Steps/Sec: 6.67
+2026-05-28 10:02:24,093 - INFO - Beginning epoch 4
+2026-05-28 10:02:33,739 - INFO - (step=0000700) Train Loss: 0.026258, Train Steps/Sec: 6.66
+2026-05-28 10:02:47,996 - INFO - Beginning epoch 5
+2026-05-28 10:02:48,786 - INFO - (step=0000800) Train Loss: 0.022433, Train Steps/Sec: 6.65
+2026-05-28 10:03:03,847 - INFO - (step=0000900) Train Loss: 0.019189, Train Steps/Sec: 6.64
+2026-05-28 10:03:12,825 - INFO - (epoch=0005) Val Loss: 0.015708
+2026-05-28 10:03:13,437 - INFO - Beginning epoch 6
+2026-05-28 10:03:20,373 - INFO - (step=0001000) Train Loss: 0.016712, Train Steps/Sec: 6.05
+2026-05-28 10:03:35,478 - INFO - (step=0001100) Train Loss: 0.014055, Train Steps/Sec: 6.62
+2026-05-28 10:03:37,403 - INFO - Beginning epoch 7
+2026-05-28 10:03:50,566 - INFO - (step=0001200) Train Loss: 0.011706, Train Steps/Sec: 6.63
+2026-05-28 10:04:01,395 - INFO - Beginning epoch 8
+2026-05-28 10:04:05,648 - INFO - (step=0001300) Train Loss: 0.011123, Train Steps/Sec: 6.63
+2026-05-28 10:04:20,716 - INFO - (step=0001400) Train Loss: 0.008740, Train Steps/Sec: 6.64
+2026-05-28 10:04:25,352 - INFO - Beginning epoch 9
+2026-05-28 10:04:35,770 - INFO - (step=0001500) Train Loss: 0.008248, Train Steps/Sec: 6.64
+2026-05-28 10:04:49,286 - INFO - Beginning epoch 10
+2026-05-28 10:04:50,822 - INFO - (step=0001600) Train Loss: 0.006514, Train Steps/Sec: 6.65
+2026-05-28 10:05:05,831 - INFO - (step=0001700) Train Loss: 0.006392, Train Steps/Sec: 6.66
+2026-05-28 10:05:14,040 - INFO - (epoch=0010) Val Loss: 0.005718
+2026-05-28 10:05:14,610 - INFO - Beginning epoch 11
+2026-05-28 10:05:22,300 - INFO - (step=0001800) Train Loss: 0.006542, Train Steps/Sec: 6.07
+2026-05-28 10:05:37,364 - INFO - (step=0001900) Train Loss: 0.005229, Train Steps/Sec: 6.64
+2026-05-28 10:05:38,533 - INFO - Beginning epoch 12
+2026-05-28 10:05:52,409 - INFO - (step=0002000) Train Loss: 0.004706, Train Steps/Sec: 6.65
+2026-05-28 10:06:02,472 - INFO - Beginning epoch 13
+2026-05-28 10:06:07,458 - INFO - (step=0002100) Train Loss: 0.005539, Train Steps/Sec: 6.65
+2026-05-28 10:06:22,493 - INFO - (step=0002200) Train Loss: 0.003693, Train Steps/Sec: 6.65
+2026-05-28 10:06:26,371 - INFO - Beginning epoch 14
+2026-05-28 10:06:37,533 - INFO - (step=0002300) Train Loss: 0.003997, Train Steps/Sec: 6.65
+2026-05-28 10:06:50,268 - INFO - Beginning epoch 15
+2026-05-28 10:06:52,547 - INFO - (step=0002400) Train Loss: 0.004066, Train Steps/Sec: 6.66
+2026-05-28 10:07:07,630 - INFO - (step=0002500) Train Loss: 0.003436, Train Steps/Sec: 6.63
+2026-05-28 10:07:15,134 - INFO - (epoch=0015) Val Loss: 0.003059
+2026-05-28 10:07:15,722 - INFO - Beginning epoch 16
+2026-05-28 10:07:24,168 - INFO - (step=0002600) Train Loss: 0.003139, Train Steps/Sec: 6.05
+2026-05-28 10:07:39,257 - INFO - (step=0002700) Train Loss: 0.003016, Train Steps/Sec: 6.63
+2026-05-28 10:07:39,697 - INFO - Beginning epoch 17
+2026-05-28 10:07:54,415 - INFO - (step=0002800) Train Loss: 0.002878, Train Steps/Sec: 6.60
+2026-05-28 10:08:03,741 - INFO - Beginning epoch 18
+2026-05-28 10:08:09,507 - INFO - (step=0002900) Train Loss: 0.003119, Train Steps/Sec: 6.63
+2026-05-28 10:08:24,621 - INFO - (step=0003000) Train Loss: 0.002576, Train Steps/Sec: 6.62
+2026-05-28 10:08:27,754 - INFO - Beginning epoch 19
+2026-05-28 10:08:39,721 - INFO - (step=0003100) Train Loss: 0.002595, Train Steps/Sec: 6.62
+2026-05-28 10:08:51,741 - INFO - Beginning epoch 20
+2026-05-28 10:08:54,787 - INFO - (step=0003200) Train Loss: 0.002331, Train Steps/Sec: 6.64
+2026-05-28 10:09:09,844 - INFO - (step=0003300) Train Loss: 0.002411, Train Steps/Sec: 6.64
+2026-05-28 10:09:16,574 - INFO - (epoch=0020) Val Loss: 0.003431
+2026-05-28 10:09:16,894 - INFO - Beginning epoch 21
+2026-05-28 10:09:26,118 - INFO - (step=0003400) Train Loss: 0.002374, Train Steps/Sec: 6.15
+2026-05-28 10:09:40,854 - INFO - Beginning epoch 22
+2026-05-28 10:09:41,177 - INFO - (step=0003500) Train Loss: 0.001790, Train Steps/Sec: 6.64
+2026-05-28 10:09:56,270 - INFO - (step=0003600) Train Loss: 0.001478, Train Steps/Sec: 6.63
+2026-05-28 10:10:04,837 - INFO - Beginning epoch 23
+2026-05-28 10:10:11,360 - INFO - (step=0003700) Train Loss: 0.001534, Train Steps/Sec: 6.63
+2026-05-28 10:10:26,458 - INFO - (step=0003800) Train Loss: 0.001624, Train Steps/Sec: 6.62
+2026-05-28 10:10:28,836 - INFO - Beginning epoch 24
+2026-05-28 10:10:41,551 - INFO - (step=0003900) Train Loss: 0.001660, Train Steps/Sec: 6.63
+2026-05-28 10:10:52,839 - INFO - Beginning epoch 25
+2026-05-28 10:10:56,639 - INFO - (step=0004000) Train Loss: 0.001244, Train Steps/Sec: 6.63
+2026-05-28 10:11:11,735 - INFO - (step=0004100) Train Loss: 0.001259, Train Steps/Sec: 6.63
+2026-05-28 10:11:17,719 - INFO - (epoch=0025) Val Loss: 0.001080
+2026-05-28 10:11:18,320 - INFO - Beginning epoch 26
+2026-05-28 10:11:28,304 - INFO - (step=0004200) Train Loss: 0.001100, Train Steps/Sec: 6.04
+2026-05-28 10:11:42,302 - INFO - Beginning epoch 27
+2026-05-28 10:11:43,398 - INFO - (step=0004300) Train Loss: 0.001566, Train Steps/Sec: 6.63
+2026-05-28 10:11:58,497 - INFO - (step=0004400) Train Loss: 0.001641, Train Steps/Sec: 6.62
+2026-05-28 10:12:06,329 - INFO - Beginning epoch 28
+2026-05-28 10:12:13,579 - INFO - (step=0004500) Train Loss: 0.001788, Train Steps/Sec: 6.63
+2026-05-28 10:12:28,656 - INFO - (step=0004600) Train Loss: 0.001065, Train Steps/Sec: 6.63
+2026-05-28 10:12:30,278 - INFO - Beginning epoch 29
+2026-05-28 10:12:43,722 - INFO - (step=0004700) Train Loss: 0.001523, Train Steps/Sec: 6.64
+2026-05-28 10:12:54,237 - INFO - Beginning epoch 30
+2026-05-28 10:12:58,774 - INFO - (step=0004800) Train Loss: 0.001178, Train Steps/Sec: 6.65
+2026-05-28 10:13:13,841 - INFO - (step=0004900) Train Loss: 0.001120, Train Steps/Sec: 6.64
+2026-05-28 10:13:19,062 - INFO - (epoch=0030) Val Loss: 0.001394
+2026-05-28 10:13:19,379 - INFO - Beginning epoch 31
+2026-05-28 10:13:30,085 - INFO - (step=0005000) Train Loss: 0.001256, Train Steps/Sec: 6.16
+2026-05-28 10:13:43,323 - INFO - Beginning epoch 32
+2026-05-28 10:13:45,156 - INFO - (step=0005100) Train Loss: 0.001604, Train Steps/Sec: 6.64
+2026-05-28 10:14:00,263 - INFO - (step=0005200) Train Loss: 0.001054, Train Steps/Sec: 6.62
+2026-05-28 10:14:07,331 - INFO - Beginning epoch 33
+2026-05-28 10:14:15,358 - INFO - (step=0005300) Train Loss: 0.001109, Train Steps/Sec: 6.63
+2026-05-28 10:14:30,439 - INFO - (step=0005400) Train Loss: 0.001072, Train Steps/Sec: 6.63
+2026-05-28 10:14:31,316 - INFO - Beginning epoch 34
+2026-05-28 10:14:45,516 - INFO - (step=0005500) Train Loss: 0.001142, Train Steps/Sec: 6.63
+2026-05-28 10:14:55,264 - INFO - Beginning epoch 35
+2026-05-28 10:15:00,554 - INFO - (step=0005600) Train Loss: 0.001298, Train Steps/Sec: 6.65
+2026-05-28 10:15:15,653 - INFO - (step=0005700) Train Loss: 0.001083, Train Steps/Sec: 6.62
+2026-05-28 10:15:20,141 - INFO - (epoch=0035) Val Loss: 0.001089
+2026-05-28 10:15:20,454 - INFO - Beginning epoch 36
+2026-05-28 10:15:31,893 - INFO - (step=0005800) Train Loss: 0.001021, Train Steps/Sec: 6.16
+2026-05-28 10:15:44,375 - INFO - Beginning epoch 37
+2026-05-28 10:15:46,959 - INFO - (step=0005900) Train Loss: 0.001013, Train Steps/Sec: 6.64
+2026-05-28 10:16:02,039 - INFO - (step=0006000) Train Loss: 0.001298, Train Steps/Sec: 6.63
+2026-05-28 10:16:08,339 - INFO - Beginning epoch 38
+2026-05-28 10:16:17,110 - INFO - (step=0006100) Train Loss: 0.000983, Train Steps/Sec: 6.64
+2026-05-28 10:16:32,121 - INFO - (step=0006200) Train Loss: 0.000938, Train Steps/Sec: 6.66
+2026-05-28 10:16:32,270 - INFO - Beginning epoch 39
+2026-05-28 10:16:47,195 - INFO - (step=0006300) Train Loss: 0.000966, Train Steps/Sec: 6.64
+2026-05-28 10:16:56,189 - INFO - Beginning epoch 40
+2026-05-28 10:17:02,240 - INFO - (step=0006400) Train Loss: 0.000886, Train Steps/Sec: 6.65
+2026-05-28 10:17:17,316 - INFO - (step=0006500) Train Loss: 0.000930, Train Steps/Sec: 6.63
+2026-05-28 10:17:21,035 - INFO - (epoch=0040) Val Loss: 0.001210
+2026-05-28 10:17:21,355 - INFO - Beginning epoch 41
+2026-05-28 10:17:33,574 - INFO - (step=0006600) Train Loss: 0.001038, Train Steps/Sec: 6.15
+2026-05-28 10:17:45,293 - INFO - Beginning epoch 42
+2026-05-28 10:17:48,631 - INFO - (step=0006700) Train Loss: 0.001019, Train Steps/Sec: 6.64
+2026-05-28 10:18:03,692 - INFO - (step=0006800) Train Loss: 0.001064, Train Steps/Sec: 6.64
+2026-05-28 10:18:09,239 - INFO - Beginning epoch 43
+2026-05-28 10:18:18,774 - INFO - (step=0006900) Train Loss: 0.001170, Train Steps/Sec: 6.63
+2026-05-28 10:18:33,248 - INFO - Beginning epoch 44
+2026-05-28 10:18:33,878 - INFO - (step=0007000) Train Loss: 0.001028, Train Steps/Sec: 6.62
+2026-05-28 10:18:48,988 - INFO - (step=0007100) Train Loss: 0.000876, Train Steps/Sec: 6.62
+2026-05-28 10:18:57,271 - INFO - Beginning epoch 45
+2026-05-28 10:19:04,086 - INFO - (step=0007200) Train Loss: 0.000991, Train Steps/Sec: 6.62
+2026-05-28 10:19:19,177 - INFO - (step=0007300) Train Loss: 0.000950, Train Steps/Sec: 6.63
+2026-05-28 10:19:22,136 - INFO - (epoch=0045) Val Loss: 0.000917
+2026-05-28 10:19:22,749 - INFO - Beginning epoch 46
+2026-05-28 10:19:35,743 - INFO - (step=0007400) Train Loss: 0.000878, Train Steps/Sec: 6.04
+2026-05-28 10:19:46,714 - INFO - Beginning epoch 47
+2026-05-28 10:19:50,816 - INFO - (step=0007500) Train Loss: 0.001008, Train Steps/Sec: 6.64
+2026-05-28 10:20:05,921 - INFO - (step=0007600) Train Loss: 0.001340, Train Steps/Sec: 6.62
+2026-05-28 10:20:10,722 - INFO - Beginning epoch 48
+2026-05-28 10:20:21,028 - INFO - (step=0007700) Train Loss: 0.001199, Train Steps/Sec: 6.62
+2026-05-28 10:20:34,724 - INFO - Beginning epoch 49
+2026-05-28 10:20:36,111 - INFO - (step=0007800) Train Loss: 0.000863, Train Steps/Sec: 6.63
+2026-05-28 10:20:51,262 - INFO - (step=0007900) Train Loss: 0.001033, Train Steps/Sec: 6.60
+2026-05-28 10:20:58,773 - INFO - Beginning epoch 50
+2026-05-28 10:21:06,352 - INFO - (step=0008000) Train Loss: 0.000946, Train Steps/Sec: 6.63
+2026-05-28 10:21:21,433 - INFO - (step=0008100) Train Loss: 0.000963, Train Steps/Sec: 6.63
+2026-05-28 10:21:23,659 - INFO - (epoch=0050) Val Loss: 0.001219
+2026-05-28 10:21:23,970 - INFO - Beginning epoch 51
+2026-05-28 10:21:37,704 - INFO - (step=0008200) Train Loss: 0.001033, Train Steps/Sec: 6.15
+2026-05-28 10:21:47,934 - INFO - Beginning epoch 52
+2026-05-28 10:21:52,794 - INFO - (step=0008300) Train Loss: 0.000901, Train Steps/Sec: 6.63
+2026-05-28 10:22:07,899 - INFO - (step=0008400) Train Loss: 0.000921, Train Steps/Sec: 6.62
+2026-05-28 10:22:11,942 - INFO - Beginning epoch 53
+2026-05-28 10:22:22,988 - INFO - (step=0008500) Train Loss: 0.000842, Train Steps/Sec: 6.63
+2026-05-28 10:22:35,925 - INFO - Beginning epoch 54
+2026-05-28 10:22:38,068 - INFO - (step=0008600) Train Loss: 0.000866, Train Steps/Sec: 6.63
+2026-05-28 10:22:53,158 - INFO - (step=0008700) Train Loss: 0.001942, Train Steps/Sec: 6.63
+2026-05-28 10:22:59,916 - INFO - Beginning epoch 55
+2026-05-28 10:23:08,248 - INFO - (step=0008800) Train Loss: 0.001848, Train Steps/Sec: 6.63
+2026-05-28 10:23:23,332 - INFO - (step=0008900) Train Loss: 0.000984, Train Steps/Sec: 6.63
+2026-05-28 10:23:24,803 - INFO - (epoch=0055) Val Loss: 0.000894
+2026-05-28 10:23:25,426 - INFO - Beginning epoch 56
+2026-05-28 10:23:39,914 - INFO - (step=0009000) Train Loss: 0.000973, Train Steps/Sec: 6.03
+2026-05-28 10:23:49,375 - INFO - Beginning epoch 57
+2026-05-28 10:23:54,988 - INFO - (step=0009100) Train Loss: 0.000819, Train Steps/Sec: 6.63
+2026-05-28 10:24:10,082 - INFO - (step=0009200) Train Loss: 0.000974, Train Steps/Sec: 6.63
+2026-05-28 10:24:13,358 - INFO - Beginning epoch 58
+2026-05-28 10:24:25,143 - INFO - (step=0009300) Train Loss: 0.000856, Train Steps/Sec: 6.64
+2026-05-28 10:24:37,320 - INFO - Beginning epoch 59
+2026-05-28 10:24:40,201 - INFO - (step=0009400) Train Loss: 0.000790, Train Steps/Sec: 6.64
+2026-05-28 10:24:55,249 - INFO - (step=0009500) Train Loss: 0.000863, Train Steps/Sec: 6.65
+2026-05-28 10:25:01,238 - INFO - Beginning epoch 60
+2026-05-28 10:25:10,302 - INFO - (step=0009600) Train Loss: 0.000813, Train Steps/Sec: 6.64
+2026-05-28 10:25:26,114 - INFO - (epoch=0060) Val Loss: 0.000761
+2026-05-28 10:25:26,727 - INFO - Beginning epoch 61
+2026-05-28 10:25:26,904 - INFO - (step=0009700) Train Loss: 0.000778, Train Steps/Sec: 6.02
+2026-05-28 10:25:42,028 - INFO - (step=0009800) Train Loss: 0.000782, Train Steps/Sec: 6.61
+2026-05-28 10:25:50,772 - INFO - Beginning epoch 62
+2026-05-28 10:25:57,144 - INFO - (step=0009900) Train Loss: 0.001000, Train Steps/Sec: 6.62
+2026-05-28 10:26:12,221 - INFO - (step=0010000) Train Loss: 0.000836, Train Steps/Sec: 6.63
+2026-05-28 10:26:14,751 - INFO - Beginning epoch 63
+2026-05-28 10:26:27,314 - INFO - (step=0010100) Train Loss: 0.000826, Train Steps/Sec: 6.63
+2026-05-28 10:26:38,754 - INFO - Beginning epoch 64
+2026-05-28 10:26:42,404 - INFO - (step=0010200) Train Loss: 0.000819, Train Steps/Sec: 6.63
+2026-05-28 10:26:57,518 - INFO - (step=0010300) Train Loss: 0.000817, Train Steps/Sec: 6.62
+2026-05-28 10:27:02,770 - INFO - Beginning epoch 65
+2026-05-28 10:27:12,641 - INFO - (step=0010400) Train Loss: 0.001067, Train Steps/Sec: 6.61
+2026-05-28 10:27:27,736 - INFO - (epoch=0065) Val Loss: 0.000937
+2026-05-28 10:27:28,052 - INFO - Beginning epoch 66
+2026-05-28 10:27:28,972 - INFO - (step=0010500) Train Loss: 0.000966, Train Steps/Sec: 6.12
+2026-05-28 10:27:44,043 - INFO - (step=0010600) Train Loss: 0.000761, Train Steps/Sec: 6.64
+2026-05-28 10:27:51,994 - INFO - Beginning epoch 67
+2026-05-28 10:27:59,105 - INFO - (step=0010700) Train Loss: 0.000799, Train Steps/Sec: 6.64
+2026-05-28 10:28:14,182 - INFO - (step=0010800) Train Loss: 0.000952, Train Steps/Sec: 6.63
+2026-05-28 10:28:15,955 - INFO - Beginning epoch 68
+2026-05-28 10:28:29,235 - INFO - (step=0010900) Train Loss: 0.000746, Train Steps/Sec: 6.64
+2026-05-28 10:28:39,895 - INFO - Beginning epoch 69
+2026-05-28 10:28:44,296 - INFO - (step=0011000) Train Loss: 0.000752, Train Steps/Sec: 6.64
+2026-05-28 10:28:59,367 - INFO - (step=0011100) Train Loss: 0.000879, Train Steps/Sec: 6.64
+2026-05-28 10:29:03,855 - INFO - Beginning epoch 70
+2026-05-28 10:29:14,437 - INFO - (step=0011200) Train Loss: 0.000792, Train Steps/Sec: 6.64
+2026-05-28 10:29:28,762 - INFO - (epoch=0070) Val Loss: 0.000743
+2026-05-28 10:29:29,371 - INFO - Beginning epoch 71
+2026-05-28 10:29:31,040 - INFO - (step=0011300) Train Loss: 0.000801, Train Steps/Sec: 6.02
+2026-05-28 10:29:46,098 - INFO - (step=0011400) Train Loss: 0.000756, Train Steps/Sec: 6.64
+2026-05-28 10:29:53,295 - INFO - Beginning epoch 72
+2026-05-28 10:30:01,176 - INFO - (step=0011500) Train Loss: 0.000877, Train Steps/Sec: 6.63
+2026-05-28 10:30:16,274 - INFO - (step=0011600) Train Loss: 0.000776, Train Steps/Sec: 6.62
+2026-05-28 10:30:17,298 - INFO - Beginning epoch 73
+2026-05-28 10:30:31,345 - INFO - (step=0011700) Train Loss: 0.000891, Train Steps/Sec: 6.64
+2026-05-28 10:30:41,282 - INFO - Beginning epoch 74
+2026-05-28 10:30:46,461 - INFO - (step=0011800) Train Loss: 0.001027, Train Steps/Sec: 6.62
+2026-05-28 10:31:01,564 - INFO - (step=0011900) Train Loss: 0.000773, Train Steps/Sec: 6.62
+2026-05-28 10:31:05,299 - INFO - Beginning epoch 75
+2026-05-28 10:31:16,654 - INFO - (step=0012000) Train Loss: 0.000759, Train Steps/Sec: 6.63
+2026-05-28 10:31:30,209 - INFO - (epoch=0075) Val Loss: 0.000735
+2026-05-28 10:31:30,816 - INFO - Beginning epoch 76
+2026-05-28 10:31:33,265 - INFO - (step=0012100) Train Loss: 0.000939, Train Steps/Sec: 6.02
+2026-05-28 10:31:48,411 - INFO - (step=0012200) Train Loss: 0.000978, Train Steps/Sec: 6.60
+2026-05-28 10:31:54,886 - INFO - Beginning epoch 77
+2026-05-28 10:32:03,570 - INFO - (step=0012300) Train Loss: 0.000722, Train Steps/Sec: 6.60
+2026-05-28 10:32:18,691 - INFO - (step=0012400) Train Loss: 0.000736, Train Steps/Sec: 6.61
+2026-05-28 10:32:18,987 - INFO - Beginning epoch 78
+2026-05-28 10:32:33,816 - INFO - (step=0012500) Train Loss: 0.000710, Train Steps/Sec: 6.61
+2026-05-28 10:32:42,999 - INFO - Beginning epoch 79
+2026-05-28 10:32:48,924 - INFO - (step=0012600) Train Loss: 0.000736, Train Steps/Sec: 6.62
+2026-05-28 10:33:04,030 - INFO - (step=0012700) Train Loss: 0.000792, Train Steps/Sec: 6.62
+2026-05-28 10:33:07,013 - INFO - Beginning epoch 80
+2026-05-28 10:33:19,140 - INFO - (step=0012800) Train Loss: 0.000718, Train Steps/Sec: 6.62
+2026-05-28 10:33:31,938 - INFO - (epoch=0080) Val Loss: 0.000719
+2026-05-28 10:33:32,552 - INFO - Beginning epoch 81
+2026-05-28 10:33:35,743 - INFO - (step=0012900) Train Loss: 0.000814, Train Steps/Sec: 6.02
+2026-05-28 10:33:50,857 - INFO - (step=0013000) Train Loss: 0.000777, Train Steps/Sec: 6.62
+2026-05-28 10:33:56,557 - INFO - Beginning epoch 82
+2026-05-28 10:34:05,952 - INFO - (step=0013100) Train Loss: 0.000775, Train Steps/Sec: 6.63
+2026-05-28 10:34:20,559 - INFO - Beginning epoch 83
+2026-05-28 10:34:21,044 - INFO - (step=0013200) Train Loss: 0.000767, Train Steps/Sec: 6.63
+2026-05-28 10:34:36,151 - INFO - (step=0013300) Train Loss: 0.000702, Train Steps/Sec: 6.62
+2026-05-28 10:34:44,572 - INFO - Beginning epoch 84
+2026-05-28 10:34:51,248 - INFO - (step=0013400) Train Loss: 0.000734, Train Steps/Sec: 6.62
+2026-05-28 10:35:06,349 - INFO - (step=0013500) Train Loss: 0.000851, Train Steps/Sec: 6.62
+2026-05-28 10:35:08,577 - INFO - Beginning epoch 85
+2026-05-28 10:35:21,452 - INFO - (step=0013600) Train Loss: 0.000738, Train Steps/Sec: 6.62
+2026-05-28 10:35:33,491 - INFO - (epoch=0085) Val Loss: 0.000783
+2026-05-28 10:35:33,795 - INFO - Beginning epoch 86
+2026-05-28 10:35:37,741 - INFO - (step=0013700) Train Loss: 0.000800, Train Steps/Sec: 6.14
+2026-05-28 10:35:52,825 - INFO - (step=0013800) Train Loss: 0.000694, Train Steps/Sec: 6.63
+2026-05-28 10:35:57,760 - INFO - Beginning epoch 87
+2026-05-28 10:36:07,880 - INFO - (step=0013900) Train Loss: 0.000786, Train Steps/Sec: 6.64
+2026-05-28 10:36:21,723 - INFO - Beginning epoch 88
+2026-05-28 10:36:22,967 - INFO - (step=0014000) Train Loss: 0.000688, Train Steps/Sec: 6.63
+2026-05-28 10:36:38,083 - INFO - (step=0014100) Train Loss: 0.000777, Train Steps/Sec: 6.62
+2026-05-28 10:36:45,742 - INFO - Beginning epoch 89
+2026-05-28 10:36:53,182 - INFO - (step=0014200) Train Loss: 0.000705, Train Steps/Sec: 6.62
+2026-05-28 10:37:08,311 - INFO - (step=0014300) Train Loss: 0.000752, Train Steps/Sec: 6.61
+2026-05-28 10:37:09,785 - INFO - Beginning epoch 90
+2026-05-28 10:37:23,409 - INFO - (step=0014400) Train Loss: 0.000768, Train Steps/Sec: 6.62
+2026-05-28 10:37:34,679 - INFO - (epoch=0090) Val Loss: 0.000661
+2026-05-28 10:37:35,273 - INFO - Beginning epoch 91
+2026-05-28 10:37:39,958 - INFO - (step=0014500) Train Loss: 0.000725, Train Steps/Sec: 6.04
+2026-05-28 10:37:55,048 - INFO - (step=0014600) Train Loss: 0.000659, Train Steps/Sec: 6.63
+2026-05-28 10:37:59,243 - INFO - Beginning epoch 92
+2026-05-28 10:38:10,125 - INFO - (step=0014700) Train Loss: 0.001174, Train Steps/Sec: 6.63
+2026-05-28 10:38:23,226 - INFO - Beginning epoch 93
+2026-05-28 10:38:25,219 - INFO - (step=0014800) Train Loss: 0.001495, Train Steps/Sec: 6.63
+2026-05-28 10:38:40,317 - INFO - (step=0014900) Train Loss: 0.000722, Train Steps/Sec: 6.62
+2026-05-28 10:38:47,230 - INFO - Beginning epoch 94
+2026-05-28 10:38:55,437 - INFO - (step=0015000) Train Loss: 0.000686, Train Steps/Sec: 6.61
+2026-05-28 10:39:10,521 - INFO - (step=0015100) Train Loss: 0.000779, Train Steps/Sec: 6.63
+2026-05-28 10:39:11,252 - INFO - Beginning epoch 95
+2026-05-28 10:39:25,629 - INFO - (step=0015200) Train Loss: 0.000667, Train Steps/Sec: 6.62
+2026-05-28 10:39:36,129 - INFO - (epoch=0095) Val Loss: 0.000673
+2026-05-28 10:39:36,444 - INFO - Beginning epoch 96
+2026-05-28 10:39:41,866 - INFO - (step=0015300) Train Loss: 0.000691, Train Steps/Sec: 6.16
+2026-05-28 10:39:56,899 - INFO - (step=0015400) Train Loss: 0.000667, Train Steps/Sec: 6.65
+2026-05-28 10:40:00,322 - INFO - Beginning epoch 97
+2026-05-28 10:40:11,934 - INFO - (step=0015500) Train Loss: 0.000708, Train Steps/Sec: 6.65
+2026-05-28 10:40:24,252 - INFO - Beginning epoch 98
+2026-05-28 10:40:27,002 - INFO - (step=0015600) Train Loss: 0.000656, Train Steps/Sec: 6.64
+2026-05-28 10:40:42,078 - INFO - (step=0015700) Train Loss: 0.000683, Train Steps/Sec: 6.64
+2026-05-28 10:40:48,224 - INFO - Beginning epoch 99
+2026-05-28 10:40:57,155 - INFO - (step=0015800) Train Loss: 0.000689, Train Steps/Sec: 6.63
+2026-05-28 10:41:12,195 - INFO - (step=0015900) Train Loss: 0.000742, Train Steps/Sec: 6.65
+2026-05-28 10:41:12,197 - INFO - Beginning epoch 100
+2026-05-28 10:41:27,307 - INFO - (step=0016000) Train Loss: 0.000664, Train Steps/Sec: 6.62
+2026-05-28 10:41:37,052 - INFO - (epoch=0100) Val Loss: 0.000703
+2026-05-28 10:41:37,372 - INFO - Beginning epoch 101
+2026-05-28 10:41:43,563 - INFO - (step=0016100) Train Loss: 0.000668, Train Steps/Sec: 6.15
+2026-05-28 10:41:58,621 - INFO - (step=0016200) Train Loss: 0.000697, Train Steps/Sec: 6.64
+2026-05-28 10:42:01,295 - INFO - Beginning epoch 102
+2026-05-28 10:42:13,660 - INFO - (step=0016300) Train Loss: 0.000659, Train Steps/Sec: 6.65
+2026-05-28 10:42:25,212 - INFO - Beginning epoch 103
+2026-05-28 10:42:28,705 - INFO - (step=0016400) Train Loss: 0.000655, Train Steps/Sec: 6.65
+2026-05-28 10:42:43,763 - INFO - (step=0016500) Train Loss: 0.000670, Train Steps/Sec: 6.64
+2026-05-28 10:42:49,150 - INFO - Beginning epoch 104
+2026-05-28 10:42:58,807 - INFO - (step=0016600) Train Loss: 0.000653, Train Steps/Sec: 6.65
+2026-05-28 10:43:13,078 - INFO - Beginning epoch 105
+2026-05-28 10:43:13,863 - INFO - (step=0016700) Train Loss: 0.000664, Train Steps/Sec: 6.64
+2026-05-28 10:43:28,929 - INFO - (step=0016800) Train Loss: 0.000639, Train Steps/Sec: 6.64
+2026-05-28 10:43:37,917 - INFO - (epoch=0105) Val Loss: 0.000580
+2026-05-28 10:43:38,506 - INFO - Beginning epoch 106
+2026-05-28 10:43:45,441 - INFO - (step=0016900) Train Loss: 0.000650, Train Steps/Sec: 6.06
+2026-05-28 10:44:00,518 - INFO - (step=0017000) Train Loss: 0.000643, Train Steps/Sec: 6.63
+2026-05-28 10:44:02,445 - INFO - Beginning epoch 107
+2026-05-28 10:44:15,577 - INFO - (step=0017100) Train Loss: 0.000642, Train Steps/Sec: 6.64
+2026-05-28 10:44:26,392 - INFO - Beginning epoch 108
+2026-05-28 10:44:30,643 - INFO - (step=0017200) Train Loss: 0.000666, Train Steps/Sec: 6.64
+2026-05-28 10:44:45,706 - INFO - (step=0017300) Train Loss: 0.000684, Train Steps/Sec: 6.64
+2026-05-28 10:44:50,342 - INFO - Beginning epoch 109
+2026-05-28 10:45:00,764 - INFO - (step=0017400) Train Loss: 0.000661, Train Steps/Sec: 6.64
+2026-05-28 10:45:14,305 - INFO - Beginning epoch 110
+2026-05-28 10:45:15,841 - INFO - (step=0017500) Train Loss: 0.000727, Train Steps/Sec: 6.63
+2026-05-28 10:45:30,937 - INFO - (step=0017600) Train Loss: 0.000629, Train Steps/Sec: 6.63
+2026-05-28 10:45:39,195 - INFO - (epoch=0110) Val Loss: 0.000741
+2026-05-28 10:45:39,514 - INFO - Beginning epoch 111
+2026-05-28 10:45:47,209 - INFO - (step=0017700) Train Loss: 0.000662, Train Steps/Sec: 6.15
+2026-05-28 10:46:02,290 - INFO - (step=0017800) Train Loss: 0.000661, Train Steps/Sec: 6.63
+2026-05-28 10:46:03,458 - INFO - Beginning epoch 112
+2026-05-28 10:46:17,337 - INFO - (step=0017900) Train Loss: 0.000613, Train Steps/Sec: 6.65
+2026-05-28 10:46:27,392 - INFO - Beginning epoch 113
+2026-05-28 10:46:32,452 - INFO - (step=0018000) Train Loss: 0.000639, Train Steps/Sec: 6.62
+2026-05-28 10:46:47,547 - INFO - (step=0018100) Train Loss: 0.000672, Train Steps/Sec: 6.63
+2026-05-28 10:46:51,443 - INFO - Beginning epoch 114
+2026-05-28 10:47:02,691 - INFO - (step=0018200) Train Loss: 0.000608, Train Steps/Sec: 6.60
+2026-05-28 10:47:15,526 - INFO - Beginning epoch 115
+2026-05-28 10:47:17,843 - INFO - (step=0018300) Train Loss: 0.000637, Train Steps/Sec: 6.60
+2026-05-28 10:47:32,972 - INFO - (step=0018400) Train Loss: 0.000671, Train Steps/Sec: 6.61
+2026-05-28 10:47:40,511 - INFO - (epoch=0115) Val Loss: 0.000661
+2026-05-28 10:47:40,831 - INFO - Beginning epoch 116
+2026-05-28 10:47:49,321 - INFO - (step=0018500) Train Loss: 0.000685, Train Steps/Sec: 6.12
+2026-05-28 10:48:04,431 - INFO - (step=0018600) Train Loss: 0.000667, Train Steps/Sec: 6.62
+2026-05-28 10:48:04,872 - INFO - Beginning epoch 117
+2026-05-28 10:48:19,576 - INFO - (step=0018700) Train Loss: 0.000616, Train Steps/Sec: 6.60
+2026-05-28 10:48:28,922 - INFO - Beginning epoch 118
+2026-05-28 10:48:34,686 - INFO - (step=0018800) Train Loss: 0.000669, Train Steps/Sec: 6.62
+2026-05-28 10:48:49,852 - INFO - (step=0018900) Train Loss: 0.000692, Train Steps/Sec: 6.60
+2026-05-28 10:48:52,989 - INFO - Beginning epoch 119
+2026-05-28 10:49:04,962 - INFO - (step=0019000) Train Loss: 0.000608, Train Steps/Sec: 6.62
+2026-05-28 10:49:17,006 - INFO - Beginning epoch 120
+2026-05-28 10:49:20,066 - INFO - (step=0019100) Train Loss: 0.000651, Train Steps/Sec: 6.62
+2026-05-28 10:49:35,190 - INFO - (step=0019200) Train Loss: 0.000631, Train Steps/Sec: 6.61
+2026-05-28 10:49:41,956 - INFO - (epoch=0120) Val Loss: 0.000606
+2026-05-28 10:49:42,273 - INFO - Beginning epoch 121
+2026-05-28 10:49:51,506 - INFO - (step=0019300) Train Loss: 0.000628, Train Steps/Sec: 6.13
+2026-05-28 10:50:06,275 - INFO - Beginning epoch 122
+2026-05-28 10:50:06,604 - INFO - (step=0019400) Train Loss: 0.000572, Train Steps/Sec: 6.62
+2026-05-28 10:50:21,722 - INFO - (step=0019500) Train Loss: 0.000625, Train Steps/Sec: 6.62
+2026-05-28 10:50:30,296 - INFO - Beginning epoch 123
+2026-05-28 10:50:36,804 - INFO - (step=0019600) Train Loss: 0.000614, Train Steps/Sec: 6.63
+2026-05-28 10:50:51,876 - INFO - (step=0019700) Train Loss: 0.000604, Train Steps/Sec: 6.64
+2026-05-28 10:50:54,258 - INFO - Beginning epoch 124
+2026-05-28 10:51:06,988 - INFO - (step=0019800) Train Loss: 0.000642, Train Steps/Sec: 6.62
+2026-05-28 10:51:18,273 - INFO - Beginning epoch 125
+2026-05-28 10:51:22,082 - INFO - (step=0019900) Train Loss: 0.000614, Train Steps/Sec: 6.63
+2026-05-28 10:51:37,185 - INFO - (step=0020000) Train Loss: 0.000616, Train Steps/Sec: 6.62
+2026-05-28 10:51:43,197 - INFO - (epoch=0125) Val Loss: 0.000626
+2026-05-28 10:51:43,514 - INFO - Beginning epoch 126
+2026-05-28 10:51:53,474 - INFO - (step=0020100) Train Loss: 0.000588, Train Steps/Sec: 6.14
+2026-05-28 10:52:07,463 - INFO - Beginning epoch 127
+2026-05-28 10:52:08,535 - INFO - (step=0020200) Train Loss: 0.000599, Train Steps/Sec: 6.64
+2026-05-28 10:52:23,649 - INFO - (step=0020300) Train Loss: 0.000635, Train Steps/Sec: 6.62
+2026-05-28 10:52:31,473 - INFO - Beginning epoch 128
+2026-05-28 10:52:38,744 - INFO - (step=0020400) Train Loss: 0.000604, Train Steps/Sec: 6.63
+2026-05-28 10:52:53,840 - INFO - (step=0020500) Train Loss: 0.000610, Train Steps/Sec: 6.63
+2026-05-28 10:52:55,463 - INFO - Beginning epoch 129
+2026-05-28 10:53:08,936 - INFO - (step=0020600) Train Loss: 0.000650, Train Steps/Sec: 6.62
+2026-05-28 10:53:19,487 - INFO - Beginning epoch 130
+2026-05-28 10:53:24,068 - INFO - (step=0020700) Train Loss: 0.000596, Train Steps/Sec: 6.61
+2026-05-28 10:53:39,207 - INFO - (step=0020800) Train Loss: 0.000576, Train Steps/Sec: 6.61
+2026-05-28 10:53:44,453 - INFO - (epoch=0130) Val Loss: 0.000575
+2026-05-28 10:53:45,051 - INFO - Beginning epoch 131
+2026-05-28 10:53:55,825 - INFO - (step=0020900) Train Loss: 0.000592, Train Steps/Sec: 6.02
+2026-05-28 10:54:09,093 - INFO - Beginning epoch 132
+2026-05-28 10:54:10,937 - INFO - (step=0021000) Train Loss: 0.000627, Train Steps/Sec: 6.62
+2026-05-28 10:54:26,056 - INFO - (step=0021100) Train Loss: 0.000721, Train Steps/Sec: 6.62
+2026-05-28 10:54:33,132 - INFO - Beginning epoch 133
+2026-05-28 10:54:41,164 - INFO - (step=0021200) Train Loss: 0.000795, Train Steps/Sec: 6.62
+2026-05-28 10:54:56,271 - INFO - (step=0021300) Train Loss: 0.000912, Train Steps/Sec: 6.62
+2026-05-28 10:54:57,149 - INFO - Beginning epoch 134
+2026-05-28 10:55:11,442 - INFO - (step=0021400) Train Loss: 0.000597, Train Steps/Sec: 6.59
+2026-05-28 10:55:21,229 - INFO - Beginning epoch 135
+2026-05-28 10:55:26,555 - INFO - (step=0021500) Train Loss: 0.000605, Train Steps/Sec: 6.62
+2026-05-28 10:55:41,682 - INFO - (step=0021600) Train Loss: 0.000620, Train Steps/Sec: 6.61
+2026-05-28 10:55:46,182 - INFO - (epoch=0135) Val Loss: 0.000561
+2026-05-28 10:55:46,778 - INFO - Beginning epoch 136
+2026-05-28 10:55:58,292 - INFO - (step=0021700) Train Loss: 0.000559, Train Steps/Sec: 6.02
+2026-05-28 10:56:10,809 - INFO - Beginning epoch 137
+2026-05-28 10:56:13,409 - INFO - (step=0021800) Train Loss: 0.000598, Train Steps/Sec: 6.62
+2026-05-28 10:56:28,542 - INFO - (step=0021900) Train Loss: 0.000585, Train Steps/Sec: 6.61
+2026-05-28 10:56:34,859 - INFO - Beginning epoch 138
+2026-05-28 10:56:43,642 - INFO - (step=0022000) Train Loss: 0.000586, Train Steps/Sec: 6.62
+2026-05-28 10:56:58,701 - INFO - (step=0022100) Train Loss: 0.000572, Train Steps/Sec: 6.64
+2026-05-28 10:56:58,849 - INFO - Beginning epoch 139
+2026-05-28 10:57:13,833 - INFO - (step=0022200) Train Loss: 0.000579, Train Steps/Sec: 6.61
+2026-05-28 10:57:22,855 - INFO - Beginning epoch 140
+2026-05-28 10:57:28,931 - INFO - (step=0022300) Train Loss: 0.000602, Train Steps/Sec: 6.62
+2026-05-28 10:57:44,051 - INFO - (step=0022400) Train Loss: 0.000589, Train Steps/Sec: 6.61
+2026-05-28 10:57:47,796 - INFO - (epoch=0140) Val Loss: 0.000555
+2026-05-28 10:57:48,498 - INFO - Beginning epoch 141
+2026-05-28 10:58:00,739 - INFO - (step=0022500) Train Loss: 0.000589, Train Steps/Sec: 5.99
+2026-05-28 10:58:12,502 - INFO - Beginning epoch 142
+2026-05-28 10:58:15,862 - INFO - (step=0022600) Train Loss: 0.000557, Train Steps/Sec: 6.61
+2026-05-28 10:58:30,968 - INFO - (step=0022700) Train Loss: 0.000589, Train Steps/Sec: 6.62
+2026-05-28 10:58:36,511 - INFO - Beginning epoch 143
+2026-05-28 10:58:46,061 - INFO - (step=0022800) Train Loss: 0.000663, Train Steps/Sec: 6.63
+2026-05-28 10:59:00,551 - INFO - Beginning epoch 144
+2026-05-28 10:59:01,189 - INFO - (step=0022900) Train Loss: 0.000616, Train Steps/Sec: 6.61
+2026-05-28 10:59:16,345 - INFO - (step=0023000) Train Loss: 0.000583, Train Steps/Sec: 6.60
+2026-05-28 10:59:24,631 - INFO - Beginning epoch 145
+2026-05-28 10:59:31,449 - INFO - (step=0023100) Train Loss: 0.000632, Train Steps/Sec: 6.62
+2026-05-28 10:59:46,569 - INFO - (step=0023200) Train Loss: 0.000577, Train Steps/Sec: 6.61
+2026-05-28 10:59:49,543 - INFO - (epoch=0145) Val Loss: 0.000525
+2026-05-28 10:59:50,144 - INFO - Beginning epoch 146
+2026-05-28 11:00:03,151 - INFO - (step=0023300) Train Loss: 0.000598, Train Steps/Sec: 6.03
+2026-05-28 11:00:14,137 - INFO - Beginning epoch 147
+2026-05-28 11:00:18,254 - INFO - (step=0023400) Train Loss: 0.000582, Train Steps/Sec: 6.62
+2026-05-28 11:00:33,381 - INFO - (step=0023500) Train Loss: 0.000575, Train Steps/Sec: 6.61
+2026-05-28 11:00:38,194 - INFO - Beginning epoch 148
+2026-05-28 11:00:48,521 - INFO - (step=0023600) Train Loss: 0.000572, Train Steps/Sec: 6.61
+2026-05-28 11:01:02,269 - INFO - Beginning epoch 149
+2026-05-28 11:01:03,659 - INFO - (step=0023700) Train Loss: 0.000634, Train Steps/Sec: 6.61
+2026-05-28 11:01:18,823 - INFO - (step=0023800) Train Loss: 0.000541, Train Steps/Sec: 6.60
+2026-05-28 11:01:26,350 - INFO - Beginning epoch 150
+2026-05-28 11:01:33,937 - INFO - (step=0023900) Train Loss: 0.000593, Train Steps/Sec: 6.62
+2026-05-28 11:01:49,069 - INFO - (step=0024000) Train Loss: 0.000624, Train Steps/Sec: 6.61
+2026-05-28 11:01:51,291 - INFO - (epoch=0150) Val Loss: 0.000594
+2026-05-28 11:01:51,605 - INFO - Beginning epoch 151
+2026-05-28 11:02:05,381 - INFO - (step=0024100) Train Loss: 0.000564, Train Steps/Sec: 6.13
+2026-05-28 11:02:15,619 - INFO - Beginning epoch 152
+2026-05-28 11:02:20,490 - INFO - (step=0024200) Train Loss: 0.000562, Train Steps/Sec: 6.62
+2026-05-28 11:02:35,630 - INFO - (step=0024300) Train Loss: 0.000860, Train Steps/Sec: 6.61
+2026-05-28 11:02:39,668 - INFO - Beginning epoch 153
+2026-05-28 11:02:50,710 - INFO - (step=0024400) Train Loss: 0.000972, Train Steps/Sec: 6.63
+2026-05-28 11:03:03,681 - INFO - Beginning epoch 154
+2026-05-28 11:03:05,825 - INFO - (step=0024500) Train Loss: 0.000574, Train Steps/Sec: 6.62
+2026-05-28 11:03:20,953 - INFO - (step=0024600) Train Loss: 0.000548, Train Steps/Sec: 6.61
+2026-05-28 11:03:27,722 - INFO - Beginning epoch 155
+2026-05-28 11:03:36,062 - INFO - (step=0024700) Train Loss: 0.000551, Train Steps/Sec: 6.62
+2026-05-28 11:03:51,210 - INFO - (step=0024800) Train Loss: 0.000567, Train Steps/Sec: 6.60
+2026-05-28 11:03:52,693 - INFO - (epoch=0155) Val Loss: 0.000541
+2026-05-28 11:03:53,028 - INFO - Beginning epoch 156
+2026-05-28 11:04:07,519 - INFO - (step=0024900) Train Loss: 0.000599, Train Steps/Sec: 6.13
+2026-05-28 11:04:16,987 - INFO - Beginning epoch 157
+2026-05-28 11:04:22,601 - INFO - (step=0025000) Train Loss: 0.000556, Train Steps/Sec: 6.63
+2026-05-28 11:04:37,695 - INFO - (step=0025100) Train Loss: 0.000559, Train Steps/Sec: 6.63
+2026-05-28 11:04:40,984 - INFO - Beginning epoch 158
+2026-05-28 11:04:52,793 - INFO - (step=0025200) Train Loss: 0.000545, Train Steps/Sec: 6.62
+2026-05-28 11:05:05,008 - INFO - Beginning epoch 159
+2026-05-28 11:05:07,894 - INFO - (step=0025300) Train Loss: 0.000554, Train Steps/Sec: 6.62
+2026-05-28 11:05:23,007 - INFO - (step=0025400) Train Loss: 0.000555, Train Steps/Sec: 6.62
+2026-05-28 11:05:28,994 - INFO - Beginning epoch 160
+2026-05-28 11:05:38,086 - INFO - (step=0025500) Train Loss: 0.000595, Train Steps/Sec: 6.63
+2026-05-28 11:05:53,893 - INFO - (epoch=0160) Val Loss: 0.000524
+2026-05-28 11:05:54,517 - INFO - Beginning epoch 161
+2026-05-28 11:05:54,698 - INFO - (step=0025600) Train Loss: 0.000568, Train Steps/Sec: 6.02
+2026-05-28 11:06:09,817 - INFO - (step=0025700) Train Loss: 0.000561, Train Steps/Sec: 6.61
+2026-05-28 11:06:18,551 - INFO - Beginning epoch 162
+2026-05-28 11:06:24,943 - INFO - (step=0025800) Train Loss: 0.000569, Train Steps/Sec: 6.61
+2026-05-28 11:06:40,072 - INFO - (step=0025900) Train Loss: 0.000584, Train Steps/Sec: 6.61
+2026-05-28 11:06:42,609 - INFO - Beginning epoch 163
+2026-05-28 11:06:55,222 - INFO - (step=0026000) Train Loss: 0.000567, Train Steps/Sec: 6.60
+2026-05-28 11:07:06,687 - INFO - Beginning epoch 164
+2026-05-28 11:07:10,342 - INFO - (step=0026100) Train Loss: 0.000570, Train Steps/Sec: 6.62
+2026-05-28 11:07:25,506 - INFO - (step=0026200) Train Loss: 0.000577, Train Steps/Sec: 6.60
+2026-05-28 11:07:30,743 - INFO - Beginning epoch 165
+2026-05-28 11:07:40,616 - INFO - (step=0026300) Train Loss: 0.000583, Train Steps/Sec: 6.62
+2026-05-28 11:07:55,723 - INFO - (epoch=0165) Val Loss: 0.000525
+2026-05-28 11:07:56,041 - INFO - Beginning epoch 166
+2026-05-28 11:07:56,976 - INFO - (step=0026400) Train Loss: 0.000536, Train Steps/Sec: 6.11
+2026-05-28 11:08:12,099 - INFO - (step=0026500) Train Loss: 0.000567, Train Steps/Sec: 6.61
+2026-05-28 11:08:20,080 - INFO - Beginning epoch 167
+2026-05-28 11:08:27,224 - INFO - (step=0026600) Train Loss: 0.000576, Train Steps/Sec: 6.61
+2026-05-28 11:08:42,369 - INFO - (step=0026700) Train Loss: 0.000559, Train Steps/Sec: 6.60
+2026-05-28 11:08:44,149 - INFO - Beginning epoch 168
+2026-05-28 11:08:57,507 - INFO - (step=0026800) Train Loss: 0.000591, Train Steps/Sec: 6.61
+2026-05-28 11:09:08,227 - INFO - Beginning epoch 169
+2026-05-28 11:09:12,644 - INFO - (step=0026900) Train Loss: 0.000664, Train Steps/Sec: 6.61
+2026-05-28 11:09:27,752 - INFO - (step=0027000) Train Loss: 0.000594, Train Steps/Sec: 6.62
+2026-05-28 11:09:32,245 - INFO - Beginning epoch 170
+2026-05-28 11:09:42,834 - INFO - (step=0027100) Train Loss: 0.000540, Train Steps/Sec: 6.63
+2026-05-28 11:09:57,152 - INFO - (epoch=0170) Val Loss: 0.000536
+2026-05-28 11:09:57,471 - INFO - Beginning epoch 171
+2026-05-28 11:09:59,144 - INFO - (step=0027200) Train Loss: 0.000610, Train Steps/Sec: 6.13
+2026-05-28 11:10:14,255 - INFO - (step=0027300) Train Loss: 0.000554, Train Steps/Sec: 6.62
+2026-05-28 11:10:21,466 - INFO - Beginning epoch 172
+2026-05-28 11:10:29,341 - INFO - (step=0027400) Train Loss: 0.000573, Train Steps/Sec: 6.63
+2026-05-28 11:10:44,442 - INFO - (step=0027500) Train Loss: 0.000580, Train Steps/Sec: 6.62
+2026-05-28 11:10:45,467 - INFO - Beginning epoch 173
+2026-05-28 11:10:59,589 - INFO - (step=0027600) Train Loss: 0.000549, Train Steps/Sec: 6.60
+2026-05-28 11:11:09,540 - INFO - Beginning epoch 174
+2026-05-28 11:11:14,731 - INFO - (step=0027700) Train Loss: 0.000546, Train Steps/Sec: 6.61
+2026-05-28 11:11:29,871 - INFO - (step=0027800) Train Loss: 0.000532, Train Steps/Sec: 6.61
+2026-05-28 11:11:33,614 - INFO - Beginning epoch 175
+2026-05-28 11:11:45,011 - INFO - (step=0027900) Train Loss: 0.000599, Train Steps/Sec: 6.61
+2026-05-28 11:11:58,619 - INFO - (epoch=0175) Val Loss: 0.000628
+2026-05-28 11:11:58,931 - INFO - Beginning epoch 176
+2026-05-28 11:12:01,366 - INFO - (step=0028000) Train Loss: 0.000652, Train Steps/Sec: 6.12
+2026-05-28 11:12:16,483 - INFO - (step=0028100) Train Loss: 0.000540, Train Steps/Sec: 6.62
+2026-05-28 11:12:22,947 - INFO - Beginning epoch 177
+2026-05-28 11:12:31,634 - INFO - (step=0028200) Train Loss: 0.000535, Train Steps/Sec: 6.60
+2026-05-28 11:12:46,720 - INFO - (step=0028300) Train Loss: 0.000552, Train Steps/Sec: 6.63
+2026-05-28 11:12:47,016 - INFO - Beginning epoch 178
+2026-05-28 11:13:01,891 - INFO - (step=0028400) Train Loss: 0.000569, Train Steps/Sec: 6.59
+2026-05-28 11:13:11,088 - INFO - Beginning epoch 179
+2026-05-28 11:13:17,021 - INFO - (step=0028500) Train Loss: 0.000564, Train Steps/Sec: 6.61
+2026-05-28 11:13:32,090 - INFO - (step=0028600) Train Loss: 0.000548, Train Steps/Sec: 6.64
+2026-05-28 11:13:35,068 - INFO - Beginning epoch 180
+2026-05-28 11:13:47,167 - INFO - (step=0028700) Train Loss: 0.000596, Train Steps/Sec: 6.63
+2026-05-28 11:13:59,941 - INFO - (epoch=0180) Val Loss: 0.000535
+2026-05-28 11:14:00,271 - INFO - Beginning epoch 181
+2026-05-28 11:14:03,460 - INFO - (step=0028800) Train Loss: 0.000537, Train Steps/Sec: 6.14
+2026-05-28 11:14:18,594 - INFO - (step=0028900) Train Loss: 0.000565, Train Steps/Sec: 6.61
+2026-05-28 11:14:24,297 - INFO - Beginning epoch 182
+2026-05-28 11:14:33,686 - INFO - (step=0029000) Train Loss: 0.000544, Train Steps/Sec: 6.63
+2026-05-28 11:14:48,308 - INFO - Beginning epoch 183
+2026-05-28 11:14:48,786 - INFO - (step=0029100) Train Loss: 0.000689, Train Steps/Sec: 6.62
+2026-05-28 11:15:03,900 - INFO - (step=0029200) Train Loss: 0.000524, Train Steps/Sec: 6.62
+2026-05-28 11:15:12,326 - INFO - Beginning epoch 184
+2026-05-28 11:15:19,023 - INFO - (step=0029300) Train Loss: 0.000525, Train Steps/Sec: 6.61
+2026-05-28 11:15:34,162 - INFO - (step=0029400) Train Loss: 0.000564, Train Steps/Sec: 6.61
+2026-05-28 11:15:36,398 - INFO - Beginning epoch 185
+2026-05-28 11:15:49,281 - INFO - (step=0029500) Train Loss: 0.000529, Train Steps/Sec: 6.61
+2026-05-28 11:16:01,328 - INFO - (epoch=0185) Val Loss: 0.000500
+2026-05-28 11:16:01,929 - INFO - Beginning epoch 186
+2026-05-28 11:16:05,871 - INFO - (step=0029600) Train Loss: 0.000540, Train Steps/Sec: 6.03
+2026-05-28 11:16:20,976 - INFO - (step=0029700) Train Loss: 0.000594, Train Steps/Sec: 6.62
+2026-05-28 11:16:25,928 - INFO - Beginning epoch 187
+2026-05-28 11:16:36,090 - INFO - (step=0029800) Train Loss: 0.000525, Train Steps/Sec: 6.62
+2026-05-28 11:16:49,956 - INFO - Beginning epoch 188
+2026-05-28 11:16:51,181 - INFO - (step=0029900) Train Loss: 0.000544, Train Steps/Sec: 6.63
+2026-05-28 11:17:06,301 - INFO - (step=0030000) Train Loss: 0.000592, Train Steps/Sec: 6.61
+2026-05-28 11:17:13,960 - INFO - Beginning epoch 189
+2026-05-28 11:17:21,382 - INFO - (step=0030100) Train Loss: 0.000526, Train Steps/Sec: 6.63
+2026-05-28 11:17:36,510 - INFO - (step=0030200) Train Loss: 0.000550, Train Steps/Sec: 6.61
+2026-05-28 11:17:37,987 - INFO - Beginning epoch 190
+2026-05-28 11:17:51,636 - INFO - (step=0030300) Train Loss: 0.000506, Train Steps/Sec: 6.61
+2026-05-28 11:18:02,929 - INFO - (epoch=0190) Val Loss: 0.000552
+2026-05-28 11:18:03,245 - INFO - Beginning epoch 191
+2026-05-28 11:18:07,961 - INFO - (step=0030400) Train Loss: 0.000569, Train Steps/Sec: 6.13
+2026-05-28 11:18:23,100 - INFO - (step=0030500) Train Loss: 0.000535, Train Steps/Sec: 6.61
+2026-05-28 11:18:27,293 - INFO - Beginning epoch 192
+2026-05-28 11:18:38,221 - INFO - (step=0030600) Train Loss: 0.000591, Train Steps/Sec: 6.61
+2026-05-28 11:18:51,364 - INFO - Beginning epoch 193
+2026-05-28 11:18:53,345 - INFO - (step=0030700) Train Loss: 0.000543, Train Steps/Sec: 6.61
+2026-05-28 11:19:08,491 - INFO - (step=0030800) Train Loss: 0.000578, Train Steps/Sec: 6.60
+2026-05-28 11:19:15,411 - INFO - Beginning epoch 194
+2026-05-28 11:19:23,633 - INFO - (step=0030900) Train Loss: 0.000542, Train Steps/Sec: 6.61
+2026-05-28 11:19:38,751 - INFO - (step=0031000) Train Loss: 0.000515, Train Steps/Sec: 6.62
+2026-05-28 11:19:39,484 - INFO - Beginning epoch 195
+2026-05-28 11:19:53,881 - INFO - (step=0031100) Train Loss: 0.000599, Train Steps/Sec: 6.61
+2026-05-28 11:20:04,431 - INFO - (epoch=0195) Val Loss: 0.000508
+2026-05-28 11:20:04,734 - INFO - Beginning epoch 196
+2026-05-28 11:20:10,175 - INFO - (step=0031200) Train Loss: 0.000532, Train Steps/Sec: 6.14
+2026-05-28 11:20:25,254 - INFO - (step=0031300) Train Loss: 0.000579, Train Steps/Sec: 6.63
+2026-05-28 11:20:28,691 - INFO - Beginning epoch 197
+2026-05-28 11:20:40,365 - INFO - (step=0031400) Train Loss: 0.000518, Train Steps/Sec: 6.62
+2026-05-28 11:20:52,731 - INFO - Beginning epoch 198
+2026-05-28 11:20:55,477 - INFO - (step=0031500) Train Loss: 0.000542, Train Steps/Sec: 6.62
+2026-05-28 11:21:10,648 - INFO - (step=0031600) Train Loss: 0.000539, Train Steps/Sec: 6.59
+2026-05-28 11:21:16,809 - INFO - Beginning epoch 199
+2026-05-28 11:21:25,764 - INFO - (step=0031700) Train Loss: 0.000523, Train Steps/Sec: 6.62
+2026-05-28 11:21:40,870 - INFO - (step=0031800) Train Loss: 0.000603, Train Steps/Sec: 6.62
+2026-05-28 11:21:40,873 - INFO - Done!
+2026-05-31 16:19:44,881 - INFO - Dataset contains 43,694 samples (/home/afan2025/Masters/Deep_Learning_Systems/preprocessedData/phoneme_data_fixed.npz)
+2026-05-31 16:19:44,881 - INFO - Train split: 39,324, Val split: 4,370
+2026-05-31 16:19:44,881 - INFO - Vocab size of dataset is 75, provided vocab size is 42
+2026-05-31 16:19:45,737 - INFO - Model initiated using device cuda
+2026-05-31 16:19:45,737 - INFO - creating EMA
+2026-05-31 16:19:46,267 - INFO - Diffusion Scheduler created, with linear noise schedule
+2026-05-31 16:20:01,594 - INFO - Streaming train/val metrics to /home/afan2025/Masters/Deep_Learning_Systems/CSMC_35200_BraintoTextGroup/DiffNeuralDecoder/diffusionNeuralDecoder/logs/loss_metrics_1780262401.csv
+2026-05-31 16:20:01,595 - INFO - Training for 200 epochs
+2026-05-31 16:20:01,600 - INFO - Beginning epoch 0
+2026-05-31 16:20:23,647 - INFO - (step=0000100) Train Loss: 0.143909, Train Steps/Sec: 4.53
+2026-05-31 16:20:32,407 - INFO - (epoch=0000) Val Loss: 0.132096
+2026-05-31 16:20:32,862 - INFO - Beginning epoch 1
+2026-05-31 16:20:39,800 - INFO - (step=0000200) Train Loss: 0.132714, Train Steps/Sec: 6.19
+2026-05-31 16:20:54,601 - INFO - (step=0000300) Train Loss: 0.096935, Train Steps/Sec: 6.76
+2026-05-31 16:20:55,478 - INFO - Beginning epoch 2
+2026-05-31 16:21:09,443 - INFO - (step=0000400) Train Loss: 0.057810, Train Steps/Sec: 6.74
+2026-05-31 16:21:18,209 - INFO - Beginning epoch 3
+2026-05-31 16:21:24,322 - INFO - (step=0000500) Train Loss: 0.044407, Train Steps/Sec: 6.72
+2026-05-31 16:21:39,200 - INFO - (step=0000600) Train Loss: 0.038078, Train Steps/Sec: 6.72
+2026-05-31 16:21:40,972 - INFO - Beginning epoch 4
+2026-05-31 16:21:54,099 - INFO - (step=0000700) Train Loss: 0.033378, Train Steps/Sec: 6.71
+2026-05-31 16:22:03,757 - INFO - Beginning epoch 5
+2026-05-31 16:22:08,973 - INFO - (step=0000800) Train Loss: 0.027044, Train Steps/Sec: 6.72
+2026-05-31 16:22:23,853 - INFO - (step=0000900) Train Loss: 0.022596, Train Steps/Sec: 6.72
+2026-05-31 16:22:27,348 - INFO - (epoch=0005) Val Loss: 0.020666
+2026-05-31 16:22:27,810 - INFO - Beginning epoch 6
+2026-05-31 16:22:40,046 - INFO - (step=0001000) Train Loss: 0.018706, Train Steps/Sec: 6.18
+2026-05-31 16:22:50,661 - INFO - Beginning epoch 7
+2026-05-31 16:22:54,995 - INFO - (step=0001100) Train Loss: 0.015522, Train Steps/Sec: 6.69
+2026-05-31 16:23:09,942 - INFO - (step=0001200) Train Loss: 0.012240, Train Steps/Sec: 6.69
+2026-05-31 16:23:13,503 - INFO - Beginning epoch 8
+2026-05-31 16:23:24,850 - INFO - (step=0001300) Train Loss: 0.009886, Train Steps/Sec: 6.71
+2026-05-31 16:23:36,332 - INFO - Beginning epoch 9
+2026-05-31 16:23:39,792 - INFO - (step=0001400) Train Loss: 0.008339, Train Steps/Sec: 6.69
+2026-05-31 16:23:54,749 - INFO - (step=0001500) Train Loss: 0.007297, Train Steps/Sec: 6.69
+2026-05-31 16:23:59,211 - INFO - Beginning epoch 10
+2026-05-31 16:24:09,694 - INFO - (step=0001600) Train Loss: 0.005716, Train Steps/Sec: 6.69
+2026-05-31 16:24:22,927 - INFO - (epoch=0010) Val Loss: 0.005461
+2026-05-31 16:24:23,399 - INFO - Beginning epoch 11
+2026-05-31 16:24:25,946 - INFO - (step=0001700) Train Loss: 0.005401, Train Steps/Sec: 6.15
+2026-05-31 16:24:40,836 - INFO - (step=0001800) Train Loss: 0.004962, Train Steps/Sec: 6.72
+2026-05-31 16:24:46,179 - INFO - Beginning epoch 12
+2026-05-31 16:24:55,733 - INFO - (step=0001900) Train Loss: 0.003534, Train Steps/Sec: 6.71
+2026-05-31 16:25:08,972 - INFO - Beginning epoch 13
+2026-05-31 16:25:10,635 - INFO - (step=0002000) Train Loss: 0.002824, Train Steps/Sec: 6.71
+2026-05-31 16:25:25,547 - INFO - (step=0002100) Train Loss: 0.002872, Train Steps/Sec: 6.71
+2026-05-31 16:25:31,786 - INFO - Beginning epoch 14
+2026-05-31 16:25:40,458 - INFO - (step=0002200) Train Loss: 0.002543, Train Steps/Sec: 6.71
+2026-05-31 16:25:54,623 - INFO - Beginning epoch 15
+2026-05-31 16:25:55,387 - INFO - (step=0002300) Train Loss: 0.002314, Train Steps/Sec: 6.70
+2026-05-31 16:26:10,270 - INFO - (step=0002400) Train Loss: 0.002078, Train Steps/Sec: 6.72
+2026-05-31 16:26:18,226 - INFO - (epoch=0015) Val Loss: 0.002134
+2026-05-31 16:26:18,680 - INFO - Beginning epoch 16
+2026-05-31 16:26:26,440 - INFO - (step=0002500) Train Loss: 0.002089, Train Steps/Sec: 6.19
+2026-05-31 16:26:41,353 - INFO - (step=0002600) Train Loss: 0.002000, Train Steps/Sec: 6.71
+2026-05-31 16:26:41,501 - INFO - Beginning epoch 17
+2026-05-31 16:26:56,281 - INFO - (step=0002700) Train Loss: 0.001828, Train Steps/Sec: 6.70
+2026-05-31 16:27:04,329 - INFO - Beginning epoch 18
+2026-05-31 16:27:11,230 - INFO - (step=0002800) Train Loss: 0.001438, Train Steps/Sec: 6.69
