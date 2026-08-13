@@ -20,3 +20,4 @@ CUDA_LAUNCH_BLOCKING=1 python scripts/pretrain.py \
     --batch-size 4 \
     --ckpt-every 1 \
     --log-every 1 \
+    --train-from-scratch True
