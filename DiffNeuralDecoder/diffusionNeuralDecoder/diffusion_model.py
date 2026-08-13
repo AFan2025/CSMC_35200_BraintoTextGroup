@@ -218,7 +218,10 @@ class PhonemeDiTBlock(nn.Module):
         # Self-Attention block with adaptive layer norm modulation
         x_norm = self.ln_self(x)
         x_mod = modulate(x_norm, shift_msa, scale_msa)
-        attn_output, _ = self.attn(x_mod, x_mod, x_mod, key_padding_mask=x_mask)
+
+
+        # attn_output, _ = self.attn(x_mod, x_mod, x_mod, key_padding_mask=x_mask)
+        attn_output, _ = self.attn(x_mod, x_mod, x_mod)
         attn_output = gate_msa.unsqueeze(1) * attn_output
         x = x + attn_output
 
@@ -282,7 +285,8 @@ class PhonemeDiT(nn.Module):
                 brain_enc_use_layer_norm = True, #whether the brain encoder uses layer norm
                 brain_enc_mlp_num_hidden_layers = 2, #whether the brain uses MLP (only accepts 1 or 2, will fix later TODO)
                 use_final_layer = False, # whether or not to use the specialized final layer
-                decoder_approach = "nn"
+                decoder_approach = "nn",
+                emb_dim = 1024,
                 ):
         super().__init__()
         # Param Inits
@@ -291,7 +295,10 @@ class PhonemeDiT(nn.Module):
         self.use_cross_attention = use_cross_attention
 
         # Embedding Layer
-        self.x_embedder = nn.Embedding(vocab_size,d_model)
+        self.x_embedder = nn.Embedding(vocab_size,emb_dim)
+
+        # SAVE FOR LATER ABLATION
+        # self.embedding_upscale = nn.Linear(emb_dim, d_model)
 
         # Layer inits
         if self.use_cross_attention:
@@ -383,6 +390,7 @@ class PhonemeDiT(nn.Module):
 
     def embed_tok(self, x):
         return self.x_embedder(x) * math.sqrt(self.d_model) #scaled so that noise doesn't completely overtake noise
+        # return self.embedding_upscale(emb)
     
     @torch.no_grad()
     def decode_tok(self, x):

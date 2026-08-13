@@ -14,6 +14,7 @@ from copy import deepcopy
 from tqdm import tqdm
 from time import time
 from torch.utils.data import DataLoader, random_split
+import math
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))        # .../diffusionNeuralDecoder/scripts
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)                      # .../diffusionNeuralDecoder
@@ -127,7 +128,7 @@ def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_da
     per_pos = ((z_hat - x_clean) ** 2).mean(dim=-1)  # (B, S)
     loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
 
-    logits_anchor = z_hat @ model.x_embedder.weight.T
+    logits_anchor = (z_hat @ model.x_embedder.weight.T) / math.sqrt(model.d_model)
     anchor_loss = F.cross_entropy(
         logits_anchor.view(-1, model.x_embedder.weight.shape[0]),
         token_ids.view(-1),
