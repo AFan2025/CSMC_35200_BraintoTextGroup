@@ -3,6 +3,7 @@
 import logging
 import csv
 import torch
+import torch.nn.functional as F
 import numpy as np
 import argparse
 import os
@@ -28,7 +29,7 @@ load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 # Modules
 from diffusion_model import PhonemeDiT
 from diffusion import create_diffusion
-from diffusionNeuralDecoder.datasets.speechDataset import PhonemeDataset\
+from diffusionNeuralDecoder.datasets.speechDataset import PhonemeDataset
 
 # claude recced using a warmup run
 from torch.optim.lr_scheduler import LambdaLR
@@ -84,7 +85,13 @@ sh = logging.StreamHandler()
 sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 root_logger.addHandler(sh)
 
-def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_mask=None):
+@torch.no_grad()
+def anisotropy_torch(E):
+    V = E.shape[0]
+    U = F.normalize(E, dim=1)
+    return ((U.sum(0).pow(2).sum() - V) / (V * (V - 1))).item()
+
+def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_data=None, brain_mask=None):
     noise = torch.randn_like(x_clean)
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
     
@@ -93,12 +100,29 @@ def training_step(model, x_clean, x_mask, t, scheduler, brain_data=None, brain_m
     # print(f"noise_pred stats: mean={noise_pred.mean().item():.4f}, std={noise_pred.std().item():.4f}")
     # print(f"x_clean stats: mean={x_clean.mean().item():.4f}, std={x_clean.std().item():.6f}")
     # print(f"x_noisy stats: mean={x_noisy.mean().item():.4f}, std={x_noisy.std().item():.6f}")
-    
-    per_pos = ((noise_pred - noise) ** 2).mean(dim=-1)  # (B, S)
-    # print(f"per_pos stats: mean={per_pos.mean().item():.6f}, max={per_pos.max().item():.6f}")
 
+    # converting back to cleaned token predictions
+    sqrt_alpha = torch.tensor(scheduler.sqrt_alphas_cumprod, device=x_clean.device, dtype=x_clean.dtype)[t].view(-1, 1, 1)
+    sqrt_one_minus = torch.tensor(scheduler.sqrt_one_minus_alphas_cumprod, device=x_clean.device, dtype=x_clean.dtype)[t].view(-1, 1, 1)
+    z_hat = (x_noisy - sqrt_one_minus * noise_pred) / sqrt_alpha
+
+    per_pos = ((z_hat - x_clean) ** 2).mean(dim=-1)  # (B, S)
     loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
-    # print(f"final loss: {loss.item():.6f}")
+
+    logits_anchor = z_hat @ model.x_embedder.weight.T
+    anchor_loss = F.cross_entropy(
+        logits_anchor.view(-1, model.x_embedder.weight.shape[0]),
+        token_ids.view(-1),
+        ignore_index=0,  # <pad> is index 0
+    )
+
+    loss += anchor_loss
+    # DEPRECATED: old loss was doing MSE on noise themselves, as with DiT, switching to anchor loss
+    # per_pos = ((noise_pred - noise) ** 2).mean(dim=-1)  # (B, S)
+    # # print(f"per_pos stats: mean={per_pos.mean().item():.6f}, max={per_pos.max().item():.6f}")
+
+    # loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
+    # # print(f"final loss: {loss.item():.6f}")
     return loss
 
 # Additional Methods
@@ -253,19 +277,17 @@ def main(args):
         logging.info(f"Beginning epoch {epoch}")
         model.train()
         for batch in train_loader:
-            x = batch["input_ids"]
-            mask = batch["attention_mask"]
-            x = x.to(device)
-            mask = mask.to(device)
+            token_ids = batch["input_ids"].to(device)
+            mask = batch["attention_mask"].to(device)
             # logging.info(f"x min: {x.min()}, x max: {x.max()}, vocab_size: {model.x_embedder.num_embeddings}")
-            x = model.embed_tok(x)
+            x = model.embed_tok(token_ids)
 
             t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
             # logging.info(f"t shape: {t.shape}, t min: {t.min()}, t max: {t.max()}, t device: {t.device}")
             # logging.info(f"num_timesteps: {diffusion_scheduler.num_timesteps}")
             # loss_dict = diffusion_scheduler.training_losses(model, x, t) #DiT codebase has "model_kwargs" but idk what that is
             # loss = loss_dict["loss"].mean()
-            loss = training_step(model, x, mask, t, diffusion_scheduler)
+            loss = training_step(model, x, mask, t, diffusion_scheduler, token_ids=token_ids)
             opt.zero_grad()
             loss.backward()
 
@@ -286,7 +308,8 @@ def main(args):
                 avg_loss = torch.tensor(running_loss / log_steps, device=device)
                 avg_loss = avg_loss.item()
                 current_lr = scheduler.get_last_lr()[0]
-                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}")
+                ani = anisotropy_torch(model.x_embedder.weight)
+                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}, Anisotropy: {ani:.4f}")
                 append_metric(metrics_path, "train", epoch, train_steps, avg_loss, steps_per_sec, current_lr)
                 # Reset monitoring variables: 
                 running_loss = 0
@@ -299,11 +322,11 @@ def main(args):
             model.eval()
             with torch.no_grad():
                 for batch in val_loader:
-                    x = batch["input_ids"].to(device)
+                    token_ids = batch["input_ids"].to(device)
                     mask = batch["attention_mask"].to(device)
-                    x = model.embed_tok(x)
+                    x = model.embed_tok(token_ids)
                     t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
-                    val_loss = training_step(model, x, mask, t, diffusion_scheduler)
+                    val_loss = training_step(model, x, mask, t, diffusion_scheduler, token_ids=token_ids)
                     val_losses.append(val_loss.item())
 
                 avg_val_loss = np.mean(val_losses)
