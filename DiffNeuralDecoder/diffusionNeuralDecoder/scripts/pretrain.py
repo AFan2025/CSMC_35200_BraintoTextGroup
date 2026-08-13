@@ -29,7 +29,7 @@ load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 # Modules
 from diffusion_model import PhonemeDiT
 from diffusion import create_diffusion
-from diffusionNeuralDecoder.datasets.speechDataset import PhonemeDataset
+from diffusionNeuralDecoder.datasets.speechDataset import PhonemeDataset, PHONEMES
 
 # claude recced using a warmup run
 from torch.optim.lr_scheduler import LambdaLR
@@ -91,6 +91,24 @@ def anisotropy_torch(E):
     U = F.normalize(E, dim=1)
     return ((U.sum(0).pow(2).sum() - V) / (V * (V - 1))).item()
 
+@torch.no_grad()
+def participation_ratio_diagnose(E):
+    Ec = E.detach().cpu().numpy()
+    Ec = Ec - Ec.mean(axis=0, keepdims=True)
+    S = np.linalg.svd(Ec, compute_uv=False)
+    eigs = S ** 2
+    return float((eigs.sum() ** 2) / (np.sum(eigs ** 2) + 1e-12))
+
+@torch.no_grad()
+def effective_rank(E):
+    Ec = E.detach().cpu().numpy()
+    Ec = Ec - Ec.mean(axis=0, keepdims=True)
+    S = np.linalg.svd(Ec, compute_uv=False)
+    p = S / (S.sum() + 1e-12)
+    p_nz = p[p > 1e-12]
+    entropy = -np.sum(p_nz * np.log(p_nz))
+    return float(np.exp(entropy))
+
 def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_data=None, brain_mask=None):
     noise = torch.randn_like(x_clean)
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
@@ -113,7 +131,7 @@ def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_da
     anchor_loss = F.cross_entropy(
         logits_anchor.view(-1, model.x_embedder.weight.shape[0]),
         token_ids.view(-1),
-        ignore_index=0,  # <pad> is index 0
+        # ignore_index=PHONEMES.index('<pad>'),  # <pad> is index 0
     )
 
     loss += anchor_loss
@@ -265,12 +283,14 @@ def main(args):
     logging.info(f"Streaming train/val metrics to {metrics_path}")
 
     latest_path = os.path.join(CHECKPOINT_DIR, "latest.pt")
-    if os.path.exists(latest_path):
+    if not args.train_from_scratch and os.path.exists(latest_path):
         start_epoch, best_val_loss = load_checkpoint(latest_path, model, ema, opt)
         start_epoch += 1  # resume from next epoch
         logging.info(f"Resumed from epoch {start_epoch}")
     else:
         start_epoch = 0
+        if args.train_from_scratch:
+            logging.info("--train-from-scratch set: ignoring existing checkpoints")
 
     logging.info(f"Training for {args.epochs} epochs")
     for epoch in tqdm(range(start_epoch, args.epochs)):
@@ -309,7 +329,9 @@ def main(args):
                 avg_loss = avg_loss.item()
                 current_lr = scheduler.get_last_lr()[0]
                 ani = anisotropy_torch(model.x_embedder.weight)
-                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}, Anisotropy: {ani:.4f}")
+                effective_r = effective_rank(model.x_embedder.weight)
+                participation_r = participation_ratio_diagnose(model.x_embedder.weight)
+                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}, Anisotropy: {ani:.4f}, Effective Rank: {effective_r:.4f}, Participation Ratio: {participation_r:.4f}")
                 append_metric(metrics_path, "train", epoch, train_steps, avg_loss, steps_per_sec, current_lr)
                 # Reset monitoring variables: 
                 running_loss = 0
@@ -361,5 +383,6 @@ if __name__ == "__main__":
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--log-every", type=int, default=100)
     parser.add_argument("--ckpt-every", type=int, default=5)
+    parser.add_argument("--train-from-scratch", action="store_true", default=False)
     args = parser.parse_args()
     main(args)
