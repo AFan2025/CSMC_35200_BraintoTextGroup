@@ -114,7 +114,11 @@ def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_da
     noise = torch.randn_like(x_clean)
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
     
-    noise_pred = model(x_noisy, x_mask, t, brain_data, brain_mask)
+    # directly predicting z_hat
+    z_hat = model(x_noisy, x_mask, t, brain_data, brain_mask)
+
+    # noise pred paradigm
+    # noise_pred = model(x_noisy, x_mask, t, brain_data, brain_mask)
     # print(f"noise stats: mean={noise.mean().item():.4f}, std={noise.std().item():.4f}")
     # print(f"noise_pred stats: mean={noise_pred.mean().item():.4f}, std={noise_pred.std().item():.4f}")
     # print(f"x_clean stats: mean={x_clean.mean().item():.4f}, std={x_clean.std().item():.6f}")
@@ -123,12 +127,14 @@ def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_da
     # converting back to cleaned token predictions
     sqrt_alpha = torch.tensor(scheduler.sqrt_alphas_cumprod, device=x_clean.device, dtype=x_clean.dtype)[t].view(-1, 1, 1)
     sqrt_one_minus = torch.tensor(scheduler.sqrt_one_minus_alphas_cumprod, device=x_clean.device, dtype=x_clean.dtype)[t].view(-1, 1, 1)
-    z_hat = (x_noisy - sqrt_one_minus * noise_pred) / sqrt_alpha
+    # z_hat = (x_noisy - sqrt_one_minus * noise_pred) / sqrt_alpha
 
     per_pos = ((z_hat - x_clean) ** 2).mean(dim=-1)  # (B, S)
-    loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
+    # loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum() #THIS IS FOR MASKING OUT THE PADDED POSITIONS WHICH WE AREN'T DOING ANYMORE
 
-    logits_anchor = (z_hat @ model.x_embedder.weight.T) / math.sqrt(model.d_model)
+    loss = per_pos
+
+    logits_anchor = z_hat @ model.x_embedder.weight.T
     anchor_loss = F.cross_entropy(
         logits_anchor.view(-1, model.x_embedder.weight.shape[0]),
         token_ids.view(-1),
@@ -142,7 +148,7 @@ def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_da
 
     # loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum()
     # # print(f"final loss: {loss.item():.6f}")
-    return loss
+    return loss, anchor_loss
 
 # Additional Methods
 
@@ -339,7 +345,7 @@ def main(args):
             # logging.info(f"num_timesteps: {diffusion_scheduler.num_timesteps}")
             # loss_dict = diffusion_scheduler.training_losses(model, x, t) #DiT codebase has "model_kwargs" but idk what that is
             # loss = loss_dict["loss"].mean()
-            loss = training_step(model, x, mask, t, diffusion_scheduler, token_ids=token_ids)
+            loss, anchor_l = training_step(model, x, mask, t, diffusion_scheduler, token_ids=token_ids)
             opt.zero_grad()
             loss.backward()
 
@@ -363,7 +369,7 @@ def main(args):
                 ani = anisotropy_torch(model.x_embedder.weight)
                 effective_r = effective_rank(model.x_embedder.weight)
                 participation_r = participation_ratio_diagnose(model.x_embedder.weight)
-                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}, Anisotropy: {ani:.4f}, Effective Rank: {effective_r:.4f}, Participation Ratio: {participation_r:.4f}")
+                logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}, Anisotropy: {ani:.4f}, Effective Rank: {effective_r:.4f}, Participation Ratio: {participation_r:.4f}, anchor loss {anchor_l:.4f}")
                 append_metric(
                     metrics_path,
                     "train",
@@ -391,7 +397,7 @@ def main(args):
                     mask = batch["attention_mask"].to(device)
                     x = model.embed_tok(token_ids)
                     t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
-                    val_loss = training_step(model, x, mask, t, diffusion_scheduler, token_ids=token_ids)
+                    val_loss, _ = training_step(model, x, mask, t, diffusion_scheduler, token_ids=token_ids)
                     val_losses.append(val_loss.item())
 
                 avg_val_loss = np.mean(val_losses)

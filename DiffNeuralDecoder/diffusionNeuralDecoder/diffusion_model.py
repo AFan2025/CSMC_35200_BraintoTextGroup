@@ -352,7 +352,9 @@ class PhonemeDiT(nn.Module):
                     nn.init.zeros_(module.bias)
 
             elif isinstance(module, nn.Embedding):
-                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                # nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                # POSSIBLY FIX TO INITIALIZATION
+                nn.init.normal_(module.weight, mean=0.0, std=1.0) 
 
             elif isinstance(module, nn.MultiheadAttention):
                 nn.init.xavier_uniform_(module.in_proj_weight)
@@ -389,7 +391,7 @@ class PhonemeDiT(nn.Module):
                 nn.init.zeros_(self.final_layer.linear.bias)
 
     def embed_tok(self, x):
-        return self.x_embedder(x) * math.sqrt(self.d_model) #scaled so that noise doesn't completely overtake noise
+        return self.x_embedder(x) #* math.sqrt(self.d_model) #scaled so that noise doesn't completely overtake noise
         # return self.embedding_upscale(emb)
     
     @torch.no_grad()
