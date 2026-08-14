@@ -132,7 +132,7 @@ def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_da
     per_pos = ((z_hat - x_clean) ** 2).mean(dim=-1)  # (B, S)
     # loss = (per_pos * x_mask.float()).sum() / x_mask.float().sum() #THIS IS FOR MASKING OUT THE PADDED POSITIONS WHICH WE AREN'T DOING ANYMORE
 
-    loss = per_pos
+    loss = per_pos.mean()
 
     logits_anchor = z_hat @ model.x_embedder.weight.T
     anchor_loss = F.cross_entropy(
