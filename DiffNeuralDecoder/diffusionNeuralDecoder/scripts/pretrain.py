@@ -110,6 +110,12 @@ def effective_rank(E):
     entropy = -np.sum(p_nz * np.log(p_nz))
     return float(np.exp(entropy))
 
+def decode_latent_to_tokens(model, z_hat):
+    """Decode the model's direct latent predictions back to token ids via the embedding table."""
+    logits = z_hat @ model.x_embedder.weight.T
+    return logits.argmax(dim=-1)
+
+
 def training_step(model, x_clean, x_mask, t, scheduler, token_ids=None, brain_data=None, brain_mask=None):
     noise = torch.randn_like(x_clean)
     x_noisy = scheduler.q_sample(x_clean, t, noise = noise)
@@ -428,6 +434,27 @@ def main(args):
 
         model.train()
 
+    model.eval()
+    with torch.no_grad():
+        sample_sequences = []
+        for batch in val_loader:
+            token_ids = batch["input_ids"].to(device)
+            mask = batch["attention_mask"].to(device)
+            x = model.embed_tok(token_ids)
+            t = torch.randint(0, diffusion_scheduler.num_timesteps, (x.shape[0],), device=device)
+            z_hat = model(x, mask, t, None, None)
+            decoded = decode_latent_to_tokens(model, z_hat)
+            for i in range(decoded.shape[0]):
+                valid_len = int(mask[i].sum().item())
+                sample_sequences.append(decoded[i, :valid_len].detach().cpu().tolist())
+                if len(sample_sequences) >= 10:
+                    break
+            if len(sample_sequences) >= 10:
+                break
+
+        logging.info("Sample decoded sequences from the current model:")
+        for idx, seq in enumerate(sample_sequences[:10]):
+            logging.info(f"sample {idx}: {seq}")
 
     logging.info("Done!")
 
