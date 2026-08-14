@@ -458,15 +458,15 @@ def main(args):
 
         logging.info("Checking embedding gradients")
         E = model.x_embedder.weight.detach().cpu()
-        logging.info("mean:", E.mean().item(), "std:", E.std().item())
-        logging.info("per-row norm std:", E.norm(dim=1).std().item())
+        logging.info(f"mean: {E.mean().item()} std: {E.std().item()}")
+        logging.info(f"per-row norm std: {E.norm(dim=1).std().item()}")
 
         E_fresh = torch.empty_like(E)
         torch.nn.init.normal_(E_fresh, std=1.0)  # match your actual init call
 
         logging.info("KS-ish check — row norm distributions:")
-        logging.info("trained :", E.norm(dim=1)[:10])
-        logging.info("fresh   :", E_fresh.norm(dim=1)[:10])
+        logging.info(f"trained : {E.norm(dim=1)[:10]}")
+        logging.info(f"fresh   : {E_fresh.norm(dim=1)[:10]}")
 
     logging.info("Done!")
 
