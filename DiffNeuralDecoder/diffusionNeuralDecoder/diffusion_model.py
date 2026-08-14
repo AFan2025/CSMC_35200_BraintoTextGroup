@@ -295,7 +295,7 @@ class PhonemeDiT(nn.Module):
         self.use_cross_attention = use_cross_attention
 
         # Embedding Layer
-        self.x_embedder = nn.Embedding(vocab_size,emb_dim)
+        self.x_embedder = nn.Embedding(vocab_size,d_model)
 
         # SAVE FOR LATER ABLATION
         # self.embedding_upscale = nn.Linear(emb_dim, d_model)
