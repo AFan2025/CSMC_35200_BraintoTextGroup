@@ -454,7 +454,7 @@ def main(args):
 
         logging.info("Sample decoded sequences from the current model:")
         for idx, seq in enumerate(sample_sequences[:10]):
-            logging.info(f"sample {idx}: {seq}")
+            logging.info(f"sample(out) {idx}: {seq} \n sample(in) {idx}: {token_ids}")
 
     logging.info("Done!")
 
