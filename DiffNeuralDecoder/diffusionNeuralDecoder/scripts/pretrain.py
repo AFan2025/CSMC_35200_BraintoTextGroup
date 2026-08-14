@@ -189,14 +189,45 @@ def init_metrics_file(log_dir):
     metrics_path = os.path.join(log_dir, f"loss_metrics_{run_id}.csv")
     with open(metrics_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["phase", "epoch", "step", "loss", "steps_per_sec", "lr"])
+        writer.writerow([
+            "phase",
+            "epoch",
+            "step",
+            "loss",
+            "steps_per_sec",
+            "lr",
+            "anisotropy",
+            "effective_rank",
+            "participation_ratio",
+        ])
     return metrics_path
 
 
-def append_metric(metrics_path, phase, epoch, step, loss, steps_per_sec="", lr=""):
+def append_metric(
+    metrics_path,
+    phase,
+    epoch,
+    step,
+    loss,
+    steps_per_sec="",
+    lr="",
+    anisotropy="",
+    effective_rank="",
+    participation_ratio="",
+):
     with open(metrics_path, "a", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([phase, epoch, step, loss, steps_per_sec, lr])
+        writer.writerow([
+            phase,
+            epoch,
+            step,
+            loss,
+            steps_per_sec,
+            lr,
+            anisotropy,
+            effective_rank,
+            participation_ratio,
+        ])
 
 def main(args):
     """
@@ -333,7 +364,18 @@ def main(args):
                 effective_r = effective_rank(model.x_embedder.weight)
                 participation_r = participation_ratio_diagnose(model.x_embedder.weight)
                 logging.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.6f}, Train Steps/Sec: {steps_per_sec:.2f}, Anisotropy: {ani:.4f}, Effective Rank: {effective_r:.4f}, Participation Ratio: {participation_r:.4f}")
-                append_metric(metrics_path, "train", epoch, train_steps, avg_loss, steps_per_sec, current_lr)
+                append_metric(
+                    metrics_path,
+                    "train",
+                    epoch,
+                    train_steps,
+                    avg_loss,
+                    steps_per_sec,
+                    current_lr,
+                    ani,
+                    effective_r,
+                    participation_r,
+                )
                 # Reset monitoring variables: 
                 running_loss = 0
                 log_steps = 0
@@ -356,7 +398,21 @@ def main(args):
                 logging.info(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.6f}")
                 print(f"(epoch={epoch:04d}) Val Loss: {avg_val_loss:.6f}")
                 current_lr = scheduler.get_last_lr()[0]
-                append_metric(metrics_path, "val", epoch, train_steps, float(avg_val_loss), "", current_lr)
+                ani = anisotropy_torch(model.x_embedder.weight)
+                effective_r = effective_rank(model.x_embedder.weight)
+                participation_r = participation_ratio_diagnose(model.x_embedder.weight)
+                append_metric(
+                    metrics_path,
+                    "val",
+                    epoch,
+                    train_steps,
+                    float(avg_val_loss),
+                    "",
+                    current_lr,
+                    ani,
+                    effective_r,
+                    participation_r,
+                )
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     save_checkpoint(model, ema, opt, epoch, train_steps, best_val_loss, os.path.join(CHECKPOINT_DIR, "best.pt"))
